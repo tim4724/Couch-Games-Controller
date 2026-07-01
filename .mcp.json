@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "XcodeBuildMCP": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "xcodebuildmcp@2.6.2",
+        "mcp"
+      ],
+      "env": {
+        "XCODEBUILDMCP_ENABLED_WORKFLOWS": "session-management,simulator,simulator-management,ui-automation"
+      }
+    }
+  }
+}

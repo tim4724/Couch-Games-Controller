@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Phone-pad glyph: a landscape phone turned gamepad (D-pad left, buttons right).
+     Controls are even-odd holes so the same drawable works as the monochrome
+     (themed icon) layer, which renders alpha only. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#E6E1E9"
+        android:fillType="evenOdd"
+        android:pathData="M33,39 L75,39 A9,9 0 0 1 84,48 L84,60 A9,9 0 0 1 75,69 L33,69 A9,9 0 0 1 24,60 L24,48 A9,9 0 0 1 33,39 Z
+M39,46.5 L41,46.5 A1.5,1.5 0 0 1 42.5,48 L42.5,51.5 L46,51.5 A1.5,1.5 0 0 1 47.5,53 L47.5,55 A1.5,1.5 0 0 1 46,56.5 L42.5,56.5 L42.5,60 A1.5,1.5 0 0 1 41,61.5 L39,61.5 A1.5,1.5 0 0 1 37.5,60 L37.5,56.5 L34,56.5 A1.5,1.5 0 0 1 32.5,55 L32.5,53 A1.5,1.5 0 0 1 34,51.5 L37.5,51.5 L37.5,48 A1.5,1.5 0 0 1 39,46.5 Z
+M65.5,55.3 A3.2,3.2 0 1 1 65.5,61.7 A3.2,3.2 0 1 1 65.5,55.3 Z
+M71.5,46.3 A3.2,3.2 0 1 1 71.5,52.7 A3.2,3.2 0 1 1 71.5,46.3 Z" />
+</vector>

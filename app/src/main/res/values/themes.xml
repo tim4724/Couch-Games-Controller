@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.CouchGames" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- The frames before Compose draws: launch window + Android 12+ splash.
+             The splash does NOT follow windowBackground, so set it explicitly
+             (silently ignored below API 31). -->
+        <item name="android:windowBackground">@color/cg_surface</item>
+        <item name="android:windowSplashScreenBackground">@color/cg_surface</item>
+    </style>
+</resources>

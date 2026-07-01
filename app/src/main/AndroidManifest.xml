@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- The game-host WebView loads the remote controller + connects to the relay. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Lets the controller's navigator.vibrate() reach the device — WebView haptics
+         are a no-op without this. (Normal permission; no runtime request needed.) -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.CouchGames">
+        <!-- Preload the code-scanner module at install time (vs first-use download). -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="barcode_ui" />
+        <!-- Portrait-only for now — the home and every current game controller are
+             portrait; revisit per-game when a landscape controller ships. -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- App Links: a game-domain room URL (system QR scan, shared link, …) opens
+                 the app directly — the bare domain and every subdomain. pathPattern
+                 "/......" claims exactly-6-char room-code paths, so the homepage/QR
+                 display page and any non-6-char page fall through to the browser.
+                 pathPattern can't express base58, so a 6-char non-room path would still
+                 open the app — JoinResolver rejects it at runtime. autoVerify needs
+                 .well-known/assetlinks.json on each verified host. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="hexstacker.com" android:pathPattern="/......" />
+                <data android:scheme="https" android:host="*.hexstacker.com" android:pathPattern="/......" />
+            </intent-filter>
+
+            <!-- Canonical couch-games.com join links: a room code is the whole path
+                 (couch-games.com/<CODE>). pathPattern "/......" claims exactly six
+                 characters, so the marketing index and any non-6-char page fall through
+                 to the browser. pathPattern can't express base58, so avoid naming a page
+                 with a 6-char path — JoinResolver rejects non-room codes at runtime. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="couch-games.com" android:pathPattern="/......" />
+                <data android:scheme="https" android:host="*.couch-games.com" android:pathPattern="/......" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

@@ -1,0 +1,11 @@
+<!-- Viewfinder corners + QR blocks. Hand-authored: material-icons-core has no
+     QR glyph and the extended artifact is far too heavy for one icon. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M3,3 L9,3 L9,5 L5,5 L5,9 L3,9 Z M15,3 L21,3 L21,9 L19,9 L19,5 L15,5 Z M3,15 L5,15 L5,19 L9,19 L9,21 L3,21 Z M19,15 L21,15 L21,21 L15,21 L15,19 L19,19 Z M8,8 L11,8 L11,11 L8,11 Z M13,8 L16,8 L16,11 L13,11 Z M8,13 L11,13 L11,16 L8,16 Z M13,13 L15,13 L15,15 L13,15 Z" />
+</vector>

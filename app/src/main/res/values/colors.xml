@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- SurfaceLightBase in Color.kt — keep in sync. Used for the launch window
+         and the Android 12+ splash screen, i.e. the frames drawn before Compose. -->
+    <color name="cg_surface">#FAFAFB</color>
+</resources>

@@ -1,0 +1,47 @@
+package com.couchgames.controller
+
+import android.content.Intent
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import com.couchgames.controller.theme.CouchGamesTheme
+
+class MainActivity : ComponentActivity() {
+  // The URL of a pending App Link, observed by the nav host. Null on a normal launch.
+  private var pendingDeepLink by mutableStateOf<String?>(null)
+
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+
+    // Only on a fresh start — don't replay the launching VIEW intent across rotation.
+    if (savedInstanceState == null) pendingDeepLink = intent?.dataString
+
+    // Transparent system bars; icon contrast follows the system light/dark theme.
+    enableEdgeToEdge()
+    setContent {
+      CouchGamesTheme {
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+          MainNavigation(
+            deepLink = pendingDeepLink,
+            onDeepLinkConsumed = { pendingDeepLink = null },
+          )
+        }
+      }
+    }
+  }
+
+  // A new App Link while we're already running (launchMode=singleTop).
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
+    pendingDeepLink = intent.dataString
+  }
+}

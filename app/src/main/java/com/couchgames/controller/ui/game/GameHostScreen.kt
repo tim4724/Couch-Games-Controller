@@ -1,0 +1,521 @@
+package com.couchgames.controller.ui.game
+
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.Intent
+import android.content.pm.ApplicationInfo
+import android.graphics.Rect
+import android.net.Uri
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.view.ViewGroup
+import android.webkit.JavascriptInterface
+import android.webkit.WebResourceRequest
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.graphics.Insets
+import androidx.core.view.DisplayCutoutCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import com.couchgames.controller.data.LAUNCHER_HOST
+import com.couchgames.controller.data.Profile
+import com.couchgames.controller.data.ProfileStore
+import com.couchgames.controller.data.hostInDomain
+import com.couchgames.controller.theme.CouchGamesTheme
+import com.couchgames.controller.ui.components.PlayerChip
+import com.couchgames.controller.ui.components.findActivity
+import com.couchgames.controller.ui.components.hideNavigationBar
+import com.couchgames.controller.ui.main.ProfileSheet
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.roundToInt
+import org.json.JSONObject
+
+/**
+ * Hosts a game's remote controller in a native WebView under a launcher-owned
+ * "Leave" bar. As a TOP-LEVEL WebView (not an iframe), the game's `frame-ancestors`
+ * CSP doesn't apply. [allowedHosts] is the navigation allow-list — the client-side
+ * trust boundary, since the join URL can originate from an untrusted relay lookup.
+ */
+@Composable
+fun GameHostScreen(
+  joinUrl: String,
+  title: String,
+  allowedHosts: List<String>,
+  onLeave: () -> Unit,
+  onGameEnd: (reason: String?) -> Unit,
+) {
+  // Optional theming hints from the page's <head> (CONTRACT.md §4), pushed by the
+  // launcher-injected observer at load and on every runtime change.
+  var pageTheme by remember { mutableStateOf(PageTheme()) }
+  // In-game chrome is always dark, like a video player — the games are dark and a
+  // bright bar above them would be jarring.
+  CouchGamesTheme(darkTheme = true) {
+    // A game-supplied accent flows through `primary`, so every launcher accent over
+    // the game (chip, spinner, rename sheet) follows.
+    val scheme = MaterialTheme.colorScheme
+    val accented = pageTheme.accent?.let { scheme.copy(primary = it, onPrimary = contentColorOn(it)) } ?: scheme
+    MaterialTheme(colorScheme = accented) {
+      GameHostContent(joinUrl, title, allowedHosts, onLeave, onGameEnd, pageTheme, onPageTheme = { pageTheme = it })
+    }
+  }
+}
+
+@SuppressLint("SetJavaScriptEnabled")
+@Composable
+private fun GameHostContent(
+  joinUrl: String,
+  title: String,
+  allowedHosts: List<String>,
+  onLeave: () -> Unit,
+  onGameEnd: (reason: String?) -> Unit,
+  pageTheme: PageTheme,
+  onPageTheme: (PageTheme) -> Unit,
+) {
+  val context = LocalContext.current
+  val view = LocalView.current
+  val density = LocalDensity.current
+  val layoutDirection = LocalLayoutDirection.current
+  var webView by remember { mutableStateOf<WebView?>(null) }
+  val allowed = remember(allowedHosts) { (allowedHosts + LAUNCHER_HOST).map { it.lowercase() } }
+  var profile by remember { mutableStateOf(ProfileStore.load(context)) }
+  var showProfile by remember { mutableStateOf(false) }
+  var loading by remember { mutableStateOf(true) }
+  val surfaceArgb = MaterialTheme.colorScheme.surface.toArgb()
+  // The bridge outlives recompositions but must call the CURRENT callbacks —
+  // hence rememberUpdatedState.
+  val currentOnGameEnd by rememberUpdatedState(onGameEnd)
+  val currentOnPageTheme by rememberUpdatedState(onPageTheme)
+  val hostBridge = remember {
+    CouchGamesHostBridge(
+      onGameEnded = { currentOnGameEnd(it) },
+      onThemeChanged = { currentOnPageTheme(it) },
+    )
+  }
+
+  // Hide ONLY the nav bar while in a game — the status bar stays. Hidden-nav +
+  // transient-by-swipe is exactly the state that LIFTS the system's 200dp-per-edge
+  // cap on gesture exclusion, so the WebView's exclusion rects (set below) can
+  // cover the whole play area. Restored on leave, along with the status-icon
+  // appearance the page theming may change.
+  DisposableEffect(Unit) {
+    val window = context.findActivity()?.window
+    val controller = window?.let { WindowCompat.getInsetsController(it, view) }
+    val originalLightStatusIcons = controller?.isAppearanceLightStatusBars ?: false
+    window?.let { hideNavigationBar(it, view) }
+    onDispose {
+      controller?.run {
+        show(WindowInsetsCompat.Type.navigationBars())
+        isAppearanceLightStatusBars = originalLightStatusIcons
+      }
+    }
+  }
+
+  fun watchPageTheme() {
+    webView?.evaluateJavascript(WATCH_PAGE_THEME_JS, null)
+  }
+
+  // Push the current name into the running controller (CONTRACT.md §2). Guarded,
+  // so a game that hasn't implemented setName is a harmless no-op.
+  fun injectName(name: String) {
+    if (name.isBlank()) return
+    webView?.evaluateJavascript(
+      "window.CouchGames && typeof window.CouchGames.setName === 'function' && " +
+        "window.CouchGames.setName(${JSONObject.quote(name)});",
+      null,
+    )
+  }
+
+  // Swallow system back — a stray press or edge swipe must not drop a player out
+  // of a live match. LEAVE is the only way out.
+  BackHandler { /* intentionally no-op */ }
+
+  // A game-supplied theme-color becomes the chrome's scrim tint; its content
+  // color is luminance-picked since the page sends no pair.
+  val barTarget = pageTheme.bar ?: MaterialTheme.colorScheme.surfaceContainer
+  val barColor by animateColorAsState(barTarget, tween(300), label = "gameBarColor")
+  val barContent = pageTheme.bar?.let(::contentColorOn)
+
+  // Safe-zone geometry, measured off the real layout (window px). Top is the
+  // chrome's full extent (inset + LEAVE bar). Right reaches the name chip's edge;
+  // the gap beyond the cutout is the chrome's content gutter, mirrored onto the
+  // left so the page lines up with the close icon — each side still adds its own
+  // cutout overhang. Bottom is the bare cutout (no chrome there).
+  var chromeHeightPx by remember { mutableStateOf(0) }
+  var chromeWidthPx by remember { mutableStateOf(0) }
+  var chipRightPx by remember { mutableStateOf(0) }
+  val cutout = WindowInsets.displayCutout
+  val cutoutLeft = cutout.getLeft(density, layoutDirection)
+  val cutoutRight = cutout.getRight(density, layoutDirection)
+  val cutoutBottom = cutout.getBottom(density)
+  var safeLeftPx by remember { mutableStateOf(0) }
+  var safeRightPx by remember { mutableStateOf(0) }
+  var safeBottomPx by remember { mutableStateOf(0) }
+
+  // Publish the safe zone to the page as CSS vars on <html> (CONTRACT.md §5), in
+  // CSS px. Reads state at CALL time — the WebView factory captures this closure once.
+  fun pushSafeZone() {
+    val d = density.density
+    webView?.evaluateJavascript(
+      "(() => { const s = document.documentElement.style;" +
+        " s.setProperty('--cg-safe-top', '${(chromeHeightPx / d).roundToInt()}px');" +
+        " s.setProperty('--cg-safe-left', '${(safeLeftPx / d).roundToInt()}px');" +
+        " s.setProperty('--cg-safe-right', '${(safeRightPx / d).roundToInt()}px');" +
+        " s.setProperty('--cg-safe-bottom', '${(safeBottomPx / d).roundToInt()}px'); })()",
+      null,
+    )
+  }
+
+  // Recompute + re-push on any layout change; requestApplyInsets re-dispatches the
+  // synthetic cutout (set up in the factory) so env(safe-area-inset-*) tracks the
+  // same four edges as the vars.
+  LaunchedEffect(
+    chromeHeightPx,
+    chromeWidthPx,
+    chipRightPx,
+    cutoutLeft,
+    cutoutRight,
+    cutoutBottom,
+    webView,
+  ) {
+    safeRightPx = if (chromeWidthPx > 0) (chromeWidthPx - chipRightPx).coerceAtLeast(cutoutRight) else cutoutRight
+    val gutter = (safeRightPx - cutoutRight).coerceAtLeast(0)
+    safeLeftPx = cutoutLeft + gutter
+    safeBottomPx = cutoutBottom
+    pushSafeZone()
+    webView?.requestApplyInsets()
+  }
+
+  // Keep status-bar icons contrasting against the (possibly game-colored) bar strip.
+  val lightStatusIcons = barTarget.luminance() > 0.5f
+  LaunchedEffect(lightStatusIcons) {
+    context.findActivity()?.window?.let {
+      WindowCompat.getInsetsController(it, view).isAppearanceLightStatusBars = lightStatusIcons
+    }
+  }
+
+  Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
+    // The game surface spans the FULL physical screen — the chrome floats above it,
+    // and the page keeps its interactive UI inside the published safe zone.
+    Box(Modifier.fillMaxSize()) {
+      AndroidView(
+        modifier = Modifier.fillMaxSize(),
+        factory = { ctx ->
+        // Never expose a player's live game socket to chrome://inspect in production.
+        val debuggable = (ctx.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        WebView.setWebContentsDebuggingEnabled(debuggable)
+        WebView(ctx).apply {
+          layoutParams = ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT,
+          )
+          settings.javaScriptEnabled = true
+          settings.domStorageEnabled = true                  // the controller persists via localStorage
+          settings.mediaPlaybackRequiresUserGesture = false
+          // Harden: the remote controller has no business touching local files.
+          settings.allowFileAccess = false
+          settings.allowContentAccess = false
+          @Suppress("DEPRECATION")
+          settings.allowFileAccessFromFileURLs = false
+          @Suppress("DEPRECATION")
+          settings.allowUniversalAccessFromFileURLs = false
+          // Match the dark chrome while the page is blank — kills the white flash.
+          setBackgroundColor(surfaceArgb)
+          // Intercept insets, two jobs. (1) The REAL insets never reach WebView:
+          // on targetSdk 35+ Chromium self-applies IME insets, and the game surface
+          // must never resize for the keyboard (it overlays it). (2) Hand WebView a
+          // SYNTHETIC display cutout equal to the full safe zone: viewport-fit=cover
+          // pages then see the same four edges as --cg-safe-* through the standard
+          // env(safe-area-inset-*). Chromium reads the DisplayCutout's safe insets;
+          // the matching insets and per-edge bounding rects keep the object
+          // self-consistent. Chromium only honors cutouts while the WebView spans
+          // the whole display, so the --cg-safe-* vars stay the source of truth.
+          ViewCompat.setOnApplyWindowInsetsListener(this) { v, _ ->
+            if (chromeHeightPx > 0) {
+              val safe = Insets.of(safeLeftPx, chromeHeightPx, safeRightPx, safeBottomPx)
+              val bounds = buildList {
+                add(Rect(0, 0, v.width, chromeHeightPx))
+                if (safeBottomPx > 0) add(Rect(0, v.height - safeBottomPx, v.width, v.height))
+                if (safeLeftPx > 0) add(Rect(0, 0, safeLeftPx, v.height))
+                if (safeRightPx > 0) add(Rect(v.width - safeRightPx, 0, v.width, v.height))
+              }
+              WindowInsetsCompat.Builder()
+                .setInsets(WindowInsetsCompat.Type.displayCutout(), safe)
+                .setDisplayCutout(DisplayCutoutCompat(Rect(safeLeftPx, chromeHeightPx, safeRightPx, safeBottomPx), bounds))
+                .build()
+                .toWindowInsets()
+                ?.let { v.onApplyWindowInsets(it) }
+            }
+            WindowInsetsCompat.CONSUMED
+          }
+          // Re-assert the name on each load (belt-and-suspenders with cgName).
+          webViewClient = AllowListWebViewClient(
+            allowed,
+            onLoaded = {
+              loading = false
+              injectName(profile.name)
+              watchPageTheme()
+              pushSafeZone()
+            },
+          )
+          keepScreenOn = true
+          // Opt the controller surface out of the system back-gesture so edge swipes
+          // reach the game (full-height only works because the nav bar is hidden).
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            addOnLayoutChangeListener { v, left, top, right, bottom, _, _, _, _ ->
+              v.systemGestureExclusionRects = listOf(Rect(0, 0, right - left, bottom - top))
+            }
+          }
+          // Must be attached before loadUrl or the page won't see it.
+          addJavascriptInterface(hostBridge, "CouchGamesHost")
+          loadUrl(joinUrl)
+          webView = this
+        }
+        },
+      )
+      // "Joining…" cover that fades away once the controller has painted.
+      // (Qualified: the ColumnScope overload would otherwise shadow this one.)
+      androidx.compose.animation.AnimatedVisibility(
+        visible = loading,
+        enter = fadeIn(),
+        exit = fadeOut(tween(300)),
+        modifier = Modifier.fillMaxSize(),
+      ) {
+        Box(
+          Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface),
+          contentAlignment = Alignment.Center,
+        ) {
+          Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+          ) {
+            CircularProgressIndicator()
+            Text(
+              "Joining $title…",
+              style = MaterialTheme.typography.bodyMedium,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+          }
+        }
+      }
+    }
+    // The floating chrome: status-bar strip + LEAVE bar over a scrim. Top +
+    // horizontal insets only, deliberately: when a keyboard opens the system
+    // re-marks the (hidden) nav bar visible, and a nav-tracking inset would move
+    // the chrome. The game surface never resizes for anything — the keyboard
+    // overlays it, like a video player.
+    Column(
+      Modifier
+        .fillMaxWidth()
+        .onGloballyPositioned {
+          chromeHeightPx = it.size.height
+          chromeWidthPx = it.size.width
+        }
+        .background(
+          Brush.verticalGradient(
+            0f to barColor.copy(alpha = 0.9f),
+            0.65f to barColor.copy(alpha = 0.5f),
+            1f to barColor.copy(alpha = 0f),
+          ),
+        )
+        .windowInsetsPadding(
+          WindowInsets.statusBars.union(WindowInsets.displayCutout)
+            .only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+        ),
+    ) {
+      LeaveBar(
+        title = title,
+        playerName = profile.name,
+        onLeave = onLeave,
+        onEditName = { showProfile = true },
+        contentColor = barContent,
+        accented = pageTheme.accent != null,
+        onChipRight = { chipRightPx = it.roundToInt() },
+      )
+    }
+  }
+
+  if (showProfile) {
+    ProfileSheet(
+      initial = profile,
+      onDismiss = { showProfile = false },
+      onSave = { saved ->
+        ProfileStore.save(context, saved)
+        profile = saved
+        showProfile = false
+        injectName(saved.name)                               // live-update the running controller
+      },
+    )
+  }
+
+  // Tear the WebView down on leave so the game's WebSocket/audio fully stop.
+  DisposableEffect(Unit) {
+    onDispose { webView?.destroy() }
+  }
+}
+
+// The launcher-owned chrome floating over the game: Close (leaving a live game
+// ends the session — it isn't navigation), the game's name, and the tappable name
+// chip (the in-game rename affordance). [contentColor] is non-null only when the
+// game supplied its own theme-color; [accented] when it supplied an accent.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LeaveBar(
+  title: String,
+  playerName: String,
+  onLeave: () -> Unit,
+  onEditName: () -> Unit,
+  contentColor: Color?,
+  accented: Boolean,
+  onChipRight: (Float) -> Unit,
+) {
+  // Route a game-supplied content color through the tokens the bar's children
+  // actually read, so everything on the bar flips together.
+  val scheme = MaterialTheme.colorScheme
+  val onBar = contentColor?.let {
+    scheme.copy(onSurface = it, onSurfaceVariant = it, outline = it.copy(alpha = 0.5f))
+  } ?: scheme
+  MaterialTheme(colorScheme = onBar) {
+    TopAppBar(
+      title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+      navigationIcon = {
+        IconButton(onClick = onLeave) {
+          Icon(Icons.Filled.Close, contentDescription = "Leave game")
+        }
+      },
+      actions = {
+        // Report the chip's window bounds up so the host can align the page's
+        // horizontal safe zone with it.
+        Box(Modifier.onGloballyPositioned { onChipRight(it.boundsInWindow().right) }) {
+          PlayerChip(name = playerName, onClick = onEditName, accented = accented)
+        }
+        Spacer(Modifier.width(12.dp))
+      },
+      // The host pads status bar + cutout around the chrome — don't re-add them.
+      windowInsets = WindowInsets(0),
+      // Transparent: the host's fading scrim is the bar's backdrop.
+      colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+    )
+  }
+}
+
+// Black or white, whichever contrasts with [color] — game-supplied colors arrive
+// without a paired "on" color.
+private fun contentColorOn(color: Color) = if (color.luminance() > 0.5f) Color.Black else Color.White
+
+/**
+ * Confines the WebView to the game's own domains (subdomains included). Only https
+ * navigations to an allow-listed domain stay in-app; off-list http(s) links open in
+ * the system browser, and any other scheme (javascript:, file:, intent:, …) is
+ * refused outright. Governs top-level/frame navigations only — subresources and the
+ * game's relay WebSocket are unaffected.
+ */
+private class AllowListWebViewClient(
+  private val allowedDomains: List<String>,
+  private val onLoaded: () -> Unit,
+) : WebViewClient() {
+  override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+    val url = request.url
+    val scheme = url.scheme?.lowercase()
+    val host = url.host
+    if (scheme == "https" && allowedDomains.any { hostInDomain(host, it) }) return false // load in-place
+    if (scheme == "http" || scheme == "https") openExternally(view.context, url) // off-list → browser
+    return true // everything not explicitly allowed is blocked from the WebView
+  }
+
+  override fun onPageFinished(view: WebView, url: String) {
+    onLoaded()
+  }
+
+  private fun openExternally(context: Context, uri: Uri) {
+    runCatching {
+      context.startActivity(
+        Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+      )
+    }
+  }
+}
+
+/**
+ * The game→launcher half of the contract (v1), exposed as `window.CouchGamesHost`.
+ * Runs on WebView's JS bridge thread, so hop to main before touching Compose state.
+ * gameEnded is fire-once — a queued second call (or a game spamming it) must not
+ * pop extra nav entries. All arguments are untrusted page input.
+ */
+private class CouchGamesHostBridge(
+  private val onGameEnded: (String?) -> Unit,
+  private val onThemeChanged: (PageTheme) -> Unit,
+) {
+  private val fired = AtomicBoolean(false)
+  private val mainHandler = Handler(Looper.getMainLooper())
+
+  @JavascriptInterface
+  fun gameEnded(reason: String?) {
+    if (!fired.compareAndSet(false, true)) return
+    mainHandler.post { onGameEnded(reason) }
+  }
+
+  // Fed by the launcher's OWN injected meta observer (WATCH_PAGE_THEME_JS) — it's
+  // on this bridge only because the page needs some JS→native channel. Not
+  // fire-once: themes change repeatedly. Parsed strictly (untrusted).
+  @JavascriptInterface
+  fun themeChanged(json: String?) {
+    val theme = parsePageTheme(json)
+    mainHandler.post { onThemeChanged(theme) }
+  }
+}

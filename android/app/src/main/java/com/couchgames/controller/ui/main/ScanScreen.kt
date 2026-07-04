@@ -56,6 +56,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size as GeometrySize
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -156,7 +157,7 @@ fun ScanScreen(
   // first new offender surface as the error.
   fun onQr(raws: List<String>) {
     if (joined) return
-    var newFailure: Pair<String, String>? = null
+    var newFailure: String? = null
     for (raw in raws) {
       when (val r = JoinResolver.resolve(raw, games)) {
         is JoinOutcome.Success -> {
@@ -165,11 +166,10 @@ fun ScanScreen(
           return
         }
         is JoinOutcome.Failure ->
-          if (newFailure == null && rejected.add(raw)) newFailure = raw to r.message
+          if (newFailure == null && rejected.add(raw)) newFailure = r.message
       }
     }
-    val (_, message) = newFailure ?: return
-    scanError = message
+    scanError = newFailure ?: return
     haptics.performHapticFeedback(HapticFeedbackType.Reject)
   }
 
@@ -355,12 +355,12 @@ private fun ViewfinderOverlay(modifier: Modifier = Modifier) {
     drawRoundRect(
       color = Color.Transparent,
       topLeft = topLeft,
-      size = androidx.compose.ui.geometry.Size(side, side),
+      size = GeometrySize(side, side),
       cornerRadius = corner,
       blendMode = BlendMode.Clear,
     )
     drawPath(
-      Path().apply { addRoundRect(RoundRect(Rect(topLeft, androidx.compose.ui.geometry.Size(side, side)), corner)) },
+      Path().apply { addRoundRect(RoundRect(Rect(topLeft, GeometrySize(side, side)), corner)) },
       color = Color.White.copy(alpha = 0.9f),
       style = Stroke(width = 2.dp.toPx()),
     )

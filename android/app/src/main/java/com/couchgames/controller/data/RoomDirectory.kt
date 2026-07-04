@@ -16,8 +16,13 @@ import java.net.URL
 const val RELAY_BASE = "https://ws.couch-games.com"
 
 sealed interface RoomLookup {
-  /** [url] is the host-declared controller URL for the room — UNTRUSTED; host-check it. */
-  data class Found(val url: String?) : RoomLookup
+  /**
+   * Room exists. [url] is the host-declared controller-URL template; [origin] is the
+   * room's declared origin (e.g. a preview deployment host). BOTH are host-declared and
+   * UNTRUSTED — resolve them through the manifest allow-list before loading. A host may
+   * register an origin but no url template, so [url] can be null while [origin] is set.
+   */
+  data class Found(val url: String?, val origin: String?) : RoomLookup
   data object NotFound : RoomLookup
   data object Error : RoomLookup
 }
@@ -38,7 +43,10 @@ object RoomDirectory {
       when (conn.responseCode) {
         200 -> {
           val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
-          RoomLookup.Found(url = json.optString("url", "").ifBlank { null })
+          RoomLookup.Found(
+            url = json.optString("url", "").ifBlank { null },
+            origin = json.optString("origin", "").ifBlank { null },
+          )
         }
         404 -> RoomLookup.NotFound
         else -> RoomLookup.Error
@@ -53,8 +61,11 @@ object RoomDirectory {
 
 /**
  * Resolve a hand-typed room code to a join target. A relay tells us which game owns
- * the code (via its stored controller URL); we then re-validate that URL's host
- * against the manifest allow-list — the relay's URL is host-declared and untrusted.
+ * the code (via its stored controller URL, or failing that the room's origin); we then
+ * re-validate that host against the manifest allow-list — both are host-declared and
+ * untrusted. The origin fallback matters for games whose display registers a room but
+ * no url template (e.g. a preview deployment on a couch-games.com subdomain): without
+ * it the code would wrongly resolve to the sole *live* game instead of its real owner.
  *
  * The shared relay ([RELAY_BASE]) doesn't yet own every game's rooms, so we also
  * query the sole live game's own relay ([Game.relayProbeBase]) IN PARALLEL and take
@@ -77,10 +88,15 @@ suspend fun resolveTypedCode(code: String, games: List<Game>): JoinOutcome = cor
 
   val founds = results.filterIsInstance<RoomLookup.Found>()
   val foundUrl = founds.firstOrNull { it.url != null }?.url
+  val foundOrigin = founds.firstOrNull { it.origin != null }?.origin
   when {
     // A relay knows the room and handed back the controller URL — load exactly that.
     foundUrl != null -> JoinResolver.resolve(foundUrl, games)
-    // Room exists but the relay stored no URL: the sole live game hosts it.
+    // No URL template, but the room declared its origin (e.g. a preview deployment on a
+    // couch-games.com subdomain owned by a not-yet-"live" game). Load the code at that
+    // origin. The origin is host-declared and untrusted; the resolver host-checks it.
+    foundOrigin != null -> JoinResolver.resolve("${foundOrigin.trimEnd('/')}/$trimmed", games)
+    // Room exists but the relay stored neither URL nor origin: the sole live game hosts it.
     founds.isNotEmpty() && sole != null -> JoinResolver.resolve(trimmed, games)
     founds.isNotEmpty() -> JoinOutcome.Failure("This code can't be matched to a game right now.")
     // No relay had the room. If any errored we couldn't truly verify — with a sole

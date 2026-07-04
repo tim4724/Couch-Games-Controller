@@ -3,8 +3,10 @@ import Foundation
 // MARK: - Lookup result
 
 enum RoomLookup: Equatable {
-    /// Room exists; url = the host-declared controller URL stored for the room (nil if none/blank). UNTRUSTED.
-    case found(url: String?)
+    /// Room exists. url = host-declared controller-URL template (nil if none/blank);
+    /// origin = the room's declared origin (nil if none/blank). BOTH host-declared and
+    /// UNTRUSTED — resolve through the allow-list. A host may register an origin but no url.
+    case found(url: String?, origin: String?)
     case notFound
     case error
 }
@@ -21,7 +23,7 @@ enum RoomDirectory {
     }()
 
     /// GET {relayBase}/room/{androidUriEncode(code)}. Never throws.
-    /// 200 + JSON object → .found(url:); 404 → .notFound; anything else → .error.
+    /// 200 + JSON object → .found(url:origin:); 404 → .notFound; anything else → .error.
     /// Empty trimmed code → .notFound (no network).
     static func lookup(code: String, relayBase: String = CG.relayBase) async -> RoomLookup {
         let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -39,11 +41,12 @@ enum RoomDirectory {
                 guard let body = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
                     return .error
                 }
-                if let raw = body["url"] as? String,
-                   !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    return .found(url: raw)
+                func nonBlank(_ key: String) -> String? {
+                    guard let s = body[key] as? String,
+                          !s.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+                    return s
                 }
-                return .found(url: nil)
+                return .found(url: nonBlank("url"), origin: nonBlank("origin"))
             case 404:
                 return .notFound
             default:
@@ -93,14 +96,25 @@ func resolveTypedCode(_ code: String, games: [Game]) async -> JoinOutcome {
 
     // Rule 1: first Found with a non-nil url (relay-list order) → resolve that URL (untrusted; re-validated).
     for result in results {
-        if case .found(let url) = result, let url {
+        if case .found(let url, _) = result, let url {
             return JoinResolver.resolve(url, games: games)
+        }
+    }
+
+    // Rule 1b: no url anywhere, but a Found declared an origin (e.g. a preview deployment
+    // on a couch-games.com subdomain owned by a not-yet-"live" game) → load the code at
+    // that origin. Untrusted; the resolver host-checks it against the allow-list.
+    for result in results {
+        if case .found(_, let origin) = result, let origin {
+            var stripped = origin
+            while stripped.hasSuffix("/") { stripped.removeLast() }
+            return JoinResolver.resolve(stripped + "/" + trimmed, games: games)
         }
     }
 
     let anyFound = results.contains { if case .found = $0 { return true } else { return false } }
 
-    // Rule 2: any Found (all nil urls) + sole live game → bare-code resolve.
+    // Rule 2: any Found (all nil urls and origins) + sole live game → bare-code resolve.
     if anyFound, sole != nil {
         return JoinResolver.resolve(trimmed, games: games)
     }

@@ -251,7 +251,7 @@ fun ScanScreen(
       ) {
         if (granted) {
           Text(
-            "Point at the QR code on your TV",
+            "Scan the QR code on your TV or laptop",
             style = MaterialTheme.typography.bodyLarge,
             color = Color.White,
             textAlign = TextAlign.Center,

@@ -6,7 +6,7 @@
 .gradle
 .kotlin
 android/local.properties
-android/.idea/
+.idea/
 android/build/
 android/captures/
 .externalNativeBuild

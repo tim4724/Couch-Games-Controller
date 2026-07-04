@@ -1,8 +1,10 @@
 package com.couchgames.controller
 
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,8 +26,13 @@ class MainActivity : ComponentActivity() {
     // Only on a fresh start — don't replay the launching VIEW intent across rotation.
     if (savedInstanceState == null) pendingDeepLink = intent?.dataString
 
-    // Transparent system bars; icon contrast follows the system light/dark theme.
-    enableEdgeToEdge()
+    // Fully transparent system bars; icon contrast follows the system light/dark
+    // theme. The no-arg default only makes the STATUS bar transparent — the nav bar
+    // keeps a ~50% scrim (DefaultDarkScrim), so pass a transparent nav style too.
+    enableEdgeToEdge(
+      statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
+      navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
+    )
     setContent {
       CouchGamesTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {

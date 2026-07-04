@@ -2,9 +2,14 @@ package com.couchgames.controller.ui.main
 
 import android.content.Context
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -58,9 +63,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -89,6 +96,7 @@ import com.couchgames.controller.ui.components.GameArt
 import com.couchgames.controller.ui.components.MirrorHostSystemBars
 import com.couchgames.controller.ui.components.PlayerChip
 import com.couchgames.controller.ui.components.stableScreenInsets
+import com.google.mlkit.common.MlKitException
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
@@ -107,6 +115,7 @@ fun MainScreen(
 ) {
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
+  val haptics = LocalHapticFeedback.current
   val lifecycleOwner = LocalLifecycleOwner.current
   val games = remember { GamesManifest.load(context) }
   var profile by remember { mutableStateOf(ProfileStore.load(context)) }
@@ -121,13 +130,21 @@ fun MainScreen(
   // Every successful join funnels through here: remember the room for one-tap
   // rejoin and open the game host.
   fun launchJoin(target: JoinOutcome.Success, p: Profile) {
+    haptics.performHapticFeedback(HapticFeedbackType.Confirm)
     RecentRoomStore.save(context, target)
     onJoin(withProfile(target.joinUrl, p), target.game.name, target.game.hosts)
   }
 
+  // Every failure surface — a bad scan, a dead room, an unavailable scanner —
+  // pairs the toast with a rejection buzz, mirroring iOS's error haptic.
+  fun fail(message: String, length: Int = Toast.LENGTH_SHORT) {
+    haptics.performHapticFeedback(HapticFeedbackType.Reject)
+    Toast.makeText(context, message, length).show()
+  }
+
   fun perform(action: AfterName, p: Profile) {
     when (action) {
-      AfterName.Scan -> startScan(context, games) { launchJoin(it, p) }
+      AfterName.Scan -> startScan(context, games, ::fail) { launchJoin(it, p) }
       AfterName.EnterCode -> { codeError = null; showCodeEntry = true }
       is AfterName.Join -> launchJoin(action.target, p)
     }
@@ -146,7 +163,7 @@ fun MainScreen(
   fun resolveAndJoin(raw: String) {
     when (val r = JoinResolver.resolve(raw, games)) {
       is JoinOutcome.Success -> requireName(AfterName.Join(r))
-      is JoinOutcome.Failure -> Toast.makeText(context, r.message, Toast.LENGTH_SHORT).show()
+      is JoinOutcome.Failure -> fail(r.message)
     }
   }
 
@@ -204,8 +221,19 @@ fun MainScreen(
           .padding(top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
       ) {
-        rejoin?.let { target ->
-          RejoinCard(target) { resolveAndJoin(target.room.joinUrl) }
+        // A relay-confirmed room springs the rejoin card in; when the room dies it
+        // springs back out. Retain the last target so the exit animation still has
+        // content to render after `rejoin` clears (mirrors iOS's scale+fade).
+        var lastRejoin by remember { mutableStateOf<RejoinTarget?>(null) }
+        LaunchedEffect(rejoin) { rejoin?.let { lastRejoin = it } }
+        AnimatedVisibility(
+          visible = rejoin != null,
+          enter = fadeIn() + scaleIn(initialScale = 0.96f),
+          exit = fadeOut() + scaleOut(targetScale = 0.96f),
+        ) {
+          lastRejoin?.let { target ->
+            RejoinCard(target) { resolveAndJoin(target.room.joinUrl) }
+          }
         }
         GamesSection(games, onOpen = { infoGame = it })
         AboutFooter(onOpenAbout)
@@ -267,7 +295,10 @@ fun MainScreen(
               showCodeEntry = false
               launchJoin(outcome, profile)
             }
-            is JoinOutcome.Failure -> codeError = outcome.message
+            is JoinOutcome.Failure -> {
+              haptics.performHapticFeedback(HapticFeedbackType.Reject)
+              codeError = outcome.message
+            }
           }
         }
       },
@@ -293,6 +324,7 @@ private data class RejoinTarget(val room: RecentRoom, val game: Game)
 private fun startScan(
   context: Context,
   games: List<Game>,
+  onFailure: (message: String, length: Int) -> Unit,
   onResolved: (JoinOutcome.Success) -> Unit,
 ) {
   val options = GmsBarcodeScannerOptions.Builder()
@@ -302,12 +334,15 @@ private fun startScan(
     .addOnSuccessListener { barcode ->
       when (val r = JoinResolver.resolve(barcode.rawValue, games)) {
         is JoinOutcome.Success -> onResolved(r)
-        is JoinOutcome.Failure ->
-          Toast.makeText(context, r.message, Toast.LENGTH_SHORT).show()
+        is JoinOutcome.Failure -> onFailure(r.message, Toast.LENGTH_SHORT)
       }
     }
+    .addOnCanceledListener { /* user backed out — not an error */ }
     .addOnFailureListener { e ->
-      Toast.makeText(context, "Scanner unavailable: ${e.message}", Toast.LENGTH_LONG).show()
+      // Backing out of the scanner surfaces here as CODE_SCANNER_CANCELLED —
+      // it's a dismissal, not a failure, so stay silent (no toast, no buzz).
+      if (e is MlKitException && e.errorCode == MlKitException.CODE_SCANNER_CANCELLED) return@addOnFailureListener
+      onFailure("Scanner unavailable: ${e.message}", Toast.LENGTH_LONG)
     }
 }
 
@@ -341,11 +376,29 @@ private fun HomeTopBar(profile: Profile, onEditProfile: () -> Unit) {
   )
 }
 
+// Tactile press feedback shared by the tappable cards: a subtle spring scale-down
+// while held, matching iOS's PressableCardButtonStyle.
+@Composable
+private fun rememberPressScale(interaction: MutableInteractionSource): Float {
+  val pressed by interaction.collectIsPressedAsState()
+  val scale by animateFloatAsState(
+    targetValue = if (pressed) 0.97f else 1f,
+    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+    label = "cardPress",
+  )
+  return scale
+}
+
 @Composable
 private fun RejoinCard(target: RejoinTarget, onClick: () -> Unit) {
+  val interaction = remember { MutableInteractionSource() }
+  val scale = rememberPressScale(interaction)
   Card(
     onClick = onClick,
-    modifier = Modifier.fillMaxWidth(),
+    modifier = Modifier
+      .fillMaxWidth()
+      .graphicsLayer { scaleX = scale; scaleY = scale },
+    interactionSource = interaction,
     colors = CardDefaults.cardColors(
       containerColor = MaterialTheme.colorScheme.secondaryContainer,
       contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -396,12 +449,7 @@ private fun GamesSection(games: List<Game>, onOpen: (Game) -> Unit) {
 @Composable
 private fun GameCard(game: Game, onOpen: (Game) -> Unit) {
   val interaction = remember { MutableInteractionSource() }
-  val pressed by interaction.collectIsPressedAsState()
-  val scale by animateFloatAsState(
-    targetValue = if (pressed) 0.97f else 1f,
-    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-    label = "cardPress",
-  )
+  val scale = rememberPressScale(interaction)
   ElevatedCard(
     onClick = { onOpen(game) },
     modifier = Modifier.fillMaxWidth().graphicsLayer { scaleX = scale; scaleY = scale },

@@ -15,8 +15,11 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import com.couchgames.controller.ui.about.AboutScreen
+import com.couchgames.controller.ui.about.LicensesScreen
 import com.couchgames.controller.ui.components.stableScreenInsets
 import com.couchgames.controller.ui.game.GameHostScreen
+import com.couchgames.controller.ui.legal.LegalLinks
+import com.couchgames.controller.ui.legal.WebDocScreen
 import com.couchgames.controller.ui.main.MainScreen
 import kotlinx.coroutines.launch
 
@@ -48,7 +51,22 @@ fun MainNavigation(deepLink: String? = null, onDeepLinkConsumed: () -> Unit = {}
           )
         }
         entry<About> {
-          AboutScreen(onBack = { backStack.removeLastOrNull() })
+          AboutScreen(
+            onOpenPrivacy = { backStack.add(WebDoc(LegalLinks.PRIVACY_URL, "Privacy Policy")) },
+            onOpenImprint = { backStack.add(WebDoc(LegalLinks.IMPRINT_URL, "Impressum")) },
+            onOpenLicenses = { backStack.add(Licenses) },
+            onBack = { backStack.removeLastOrNull() },
+          )
+        }
+        entry<Licenses> {
+          LicensesScreen(onBack = { backStack.removeLastOrNull() })
+        }
+        entry<WebDoc> { key ->
+          WebDocScreen(
+            url = key.url,
+            title = key.title,
+            onBack = { backStack.removeLastOrNull() },
+          )
         }
         entry<GameHost> { key ->
           GameHostScreen(

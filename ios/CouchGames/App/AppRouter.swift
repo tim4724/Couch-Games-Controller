@@ -16,8 +16,15 @@ struct GameHostParams: Hashable {
     }
 }
 
+struct WebDocParams: Hashable {
+    let url: String
+    let title: String
+}
+
 enum Route: Hashable {
     case gameHost(GameHostParams)
+    case about
+    case webDoc(WebDocParams)
 }
 
 // MARK: - Router
@@ -120,7 +127,8 @@ struct RootView: View {
                     onDeepLinkConsumed: { router.consumeDeepLink() },
                     onJoin: { url, title, hosts in
                         router.push(.gameHost(GameHostParams(joinUrl: url, title: title, allowedHosts: hosts)))
-                    }
+                    },
+                    onOpenAbout: { router.push(.about) }
                 )
                 .navigationDestination(for: Route.self) { route in
                     switch route {
@@ -134,6 +142,13 @@ struct RootView: View {
                         )
                         .navigationBarBackButtonHidden(true)
                         .toolbar(.hidden, for: .navigationBar)
+                    case .about:
+                        AboutScreen(
+                            onOpenPrivacy: { router.push(.webDoc(WebDocParams(url: CG.privacyURL, title: "Privacy Policy"))) },
+                            onOpenImprint: { router.push(.webDoc(WebDocParams(url: CG.imprintURL, title: "Impressum"))) }
+                        )
+                    case .webDoc(let params):
+                        WebDocScreen(url: params.url, title: params.title)
                     }
                 }
             }

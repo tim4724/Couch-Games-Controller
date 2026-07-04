@@ -34,6 +34,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
@@ -42,6 +43,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -214,7 +216,7 @@ fun MainScreen(
     ) {
       // Sits OUTSIDE the 16dp content margin (owns its own padding, like the
       // in-game LeaveBar) so the title and name chip align across screens.
-      HomeTopBar(profile = profile, onEditProfile = { showProfile = true })
+      HomeTopBar(profile = profile, onEditProfile = { showProfile = true }, onOpenAbout = onOpenAbout)
       Column(
         Modifier
           .padding(horizontal = 16.dp)
@@ -236,7 +238,6 @@ fun MainScreen(
           }
         }
         GamesSection(games, onOpen = { infoGame = it })
-        AboutFooter(onOpenAbout)
         Spacer(Modifier.height(with(LocalDensity.current) { joinCardHeightPx.toDp() } + 12.dp))
       }
     }
@@ -350,7 +351,7 @@ private fun startScan(
 // name chip land in the same place across screens (GameHostScreen.kt).
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun HomeTopBar(profile: Profile, onEditProfile: () -> Unit) {
+private fun HomeTopBar(profile: Profile, onEditProfile: () -> Unit, onOpenAbout: () -> Unit) {
   TopAppBar(
     title = {
       Column {
@@ -368,7 +369,10 @@ private fun HomeTopBar(profile: Profile, onEditProfile: () -> Unit) {
     },
     actions = {
       PlayerChip(name = profile.name, onClick = onEditProfile)
-      Spacer(Modifier.width(12.dp))
+      IconButton(onClick = onOpenAbout) {
+        Icon(Icons.Outlined.Info, contentDescription = "About")
+      }
+      Spacer(Modifier.width(8.dp))
     },
     // The host Box already pads status bar + cutout; don't let the bar re-add them.
     windowInsets = WindowInsets(0),
@@ -419,20 +423,6 @@ private fun RejoinCard(target: RejoinTarget, onClick: () -> Unit) {
       }
       Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
     }
-  }
-}
-
-@Composable
-private fun AboutFooter(onOpenAbout: () -> Unit) {
-  TextButton(
-    onClick = onOpenAbout,
-    modifier = Modifier.fillMaxWidth(),
-  ) {
-    Text(
-      "Open source licenses",
-      style = MaterialTheme.typography.labelLarge,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
   }
 }
 

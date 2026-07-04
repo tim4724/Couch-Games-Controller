@@ -11,13 +11,16 @@ struct MainScreen: View {
     let isTopVisible: Bool
     let onDeepLinkConsumed: () -> Void
     let onJoin: (String, String, [String]) -> Void   // (joinUrl, title, allowedHosts)
+    let onOpenAbout: () -> Void
 
     init(deepLink: String?, isTopVisible: Bool, onDeepLinkConsumed: @escaping () -> Void,
-         onJoin: @escaping (String, String, [String]) -> Void) {
+         onJoin: @escaping (String, String, [String]) -> Void,
+         onOpenAbout: @escaping () -> Void) {
         self.deepLink = deepLink
         self.isTopVisible = isTopVisible
         self.onDeepLinkConsumed = onDeepLinkConsumed
         self.onJoin = onJoin
+        self.onOpenAbout = onOpenAbout
     }
 
     // MARK: State
@@ -121,6 +124,15 @@ struct MainScreen: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     chipButton(labelColor: nil)
                 }
+            }
+            // About — always visible in the bar.
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    onOpenAbout()
+                } label: {
+                    Image(systemName: "info.circle")
+                }
+                .accessibilityLabel("About")
             }
         }
         .sensoryFeedback(.success, trigger: successTick)

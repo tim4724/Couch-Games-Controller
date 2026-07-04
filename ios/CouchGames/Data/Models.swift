@@ -12,6 +12,10 @@ enum CG {
     static let relayBase = "https://ws.couch-games.com"
     /// Canonical launcher domain.
     static let launcherHost = "couch-games.com"
+    /// Hosted legal pages, shown in-app via WebDocScreen so they stay reachable from
+    /// within the app (§5 DDG imprint requirement; GDPR privacy notice).
+    static let privacyURL = "https://couch-games.com/privacy"
+    static let imprintURL = "https://couch-games.com/imprint"
 }
 
 // MARK: - Game

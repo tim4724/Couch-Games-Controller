@@ -1,0 +1,59 @@
+name: CouchGames
+options:
+  createIntermediateGroups: true
+  deploymentTarget:
+    iOS: "17.0"
+targets:
+  CouchGames:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: CouchGames
+        excludes:
+          - "Resources"
+      - path: CouchGames/Resources
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.couchgames.controller
+        PRODUCT_NAME: CouchGames
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: 1
+        SWIFT_VERSION: "5.10"
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: false
+        CODE_SIGN_STYLE: Automatic
+    # TODO(associated-domains): when Universal Links go live, add an entitlements file:
+    # entitlements:
+    #   path: CouchGames/CouchGames.entitlements
+    #   properties:
+    #     com.apple.developer.associated-domains:
+    #       - applinks:hexstacker.com
+    #       - applinks:couch-games.com
+    # AASA path pattern must be a single exactly-6-char path segment (rooms are 6 chars;
+    # marketing pages fall through to the browser; JoinResolver rejects 6-char non-rooms at runtime).
+    info:
+      path: CouchGames/Info.plist
+      properties:
+        CFBundleDisplayName: Couch Games
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        ITSAppUsesNonExemptEncryption: false
+        NSCameraUsageDescription: "Couch Games uses the camera to scan the room QR code shown on your TV."
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIRequiresFullScreen: true
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+          UISceneConfigurations:
+            UIWindowSceneSessionRoleApplication:
+              - UISceneConfigurationName: Default
+                UISceneDelegateClassName: "$(PRODUCT_MODULE_NAME).SceneDelegate"
+        CFBundleURLTypes:
+          - CFBundleURLName: com.couchgames.controller
+            CFBundleURLSchemes:
+              - couchgames

@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "games": [
+    {
+      "id": "hexstacker",
+      "name": "HexStacker Party",
+      "status": "live",
+      "tagline": "Stack, Clear, Outlast Your Friends!",
+      "players": "1–8 players",
+      "art": "/artwork/hexstacker-16x9.webp",
+      "video": "hexstacker_trailer",
+      "accentColor": "#FF6B6B",
+      "controllerBaseUrl": "https://hexstacker.com",
+      "hosts": ["hexstacker.com"],
+      "roomCodeFormat": { "charset": "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz", "length": 6 },
+      "relayProbeBase": "https://ws.hexstacker.com",
+      "orientation": "portrait",
+      "demoPath": "/?demo=1"
+    },
+    {
+      "id": "tinytrack",
+      "name": "Tiny Track",
+      "status": "soon",
+      "tagline": "Draw a track, race the pack.",
+      "players": "1–4 players",
+      "art": "/artwork/tinytrack-16x9.webp",
+      "accentColor": "#4ECDC4",
+      "comingSoonNote": "Early gameplay preview — coming soon to Couch Games"
+    },
+    {
+      "id": "powder",
+      "name": "Powder",
+      "status": "soon",
+      "tagline": "Sift, settle, and sabotage.",
+      "players": "1–4 players",
+      "art": "/artwork/powder-16x9.webp",
+      "accentColor": "#A78BFA",
+      "comingSoonNote": "Early gameplay preview — coming soon to Couch Games"
+    }
+  ]
+}

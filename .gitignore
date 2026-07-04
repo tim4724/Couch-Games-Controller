@@ -1,13 +1,18 @@
+.DS_Store
+.claude/settings.local.json
+
+# Android
 *.iml
 .gradle
-/local.properties
-/.idea/
-.DS_Store
-/build
-/captures
+.kotlin
+android/local.properties
+android/.idea/
+android/build/
+android/captures/
 .externalNativeBuild
 .cxx
 
-# Kotlin
-.kotlin
-.claude/settings.local.json
+# iOS — CouchGames.xcodeproj is generated (cd ios && xcodegen generate)
+ios/CouchGames.xcodeproj
+ios/DerivedData/
+xcuserdata/

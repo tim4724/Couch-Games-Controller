@@ -1,0 +1,68 @@
+import SwiftUI
+import UIKit
+
+// MARK: - ProfileSheet
+
+struct ProfileSheet: View {
+    let initial: Profile
+    var title: String = "Your player"
+    var cta: String = "Save"
+    let onSave: (Profile) -> Void
+
+    @State private var name: String
+    @Environment(\.cgPalette) private var palette
+
+    init(initial: Profile, title: String = "Your player", cta: String = "Save",
+         onSave: @escaping (Profile) -> Void) {
+        self.initial = initial
+        self.title = title
+        self.cta = cta
+        self.onSave = onSave
+        _name = State(initialValue: initial.name)
+    }
+
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(title)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(palette.onSurface)
+
+            TextField("Your name", text: $name)
+                .textInputAutocapitalization(.words)
+                .font(.cgBodyLarge)
+                .foregroundStyle(palette.onSurface)
+                .padding(.horizontal, 16)
+                .frame(height: 52)
+                .frame(maxWidth: .infinity)
+                .background(
+                    Color(uiColor: .tertiarySystemFill),
+                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                )
+                .onChange(of: name) { _, newValue in
+                    if newValue.count > 16 {
+                        name = String(newValue.prefix(16))
+                    }
+                }
+
+            Button {
+                onSave(Profile(name: trimmedName))
+            } label: {
+                Text(cta)
+                    .font(.cgTitleMedium)
+                    .foregroundStyle(palette.onPrimary)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .buttonBorderShape(.roundedRectangle(radius: 14))
+            .controlSize(.large)
+            .disabled(trimmedName.isEmpty)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 24)
+        .padding(.bottom, 28)
+    }
+}

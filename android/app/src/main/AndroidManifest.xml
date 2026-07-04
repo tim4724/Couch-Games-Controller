@@ -6,6 +6,11 @@
     <!-- Lets the controller's navigator.vibrate() reach the device — WebView haptics
          are a no-op without this. (Normal permission; no runtime request needed.) -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- In-app QR scanner (ScanScreen). Camera is optional: manual code entry and
+         App Links join fine without one, so don't hide the app from camera-less
+         devices on Play. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
 
     <application
         android:allowBackup="true"
@@ -14,10 +19,6 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.CouchGames">
-        <!-- Preload the code-scanner module at install time (vs first-use download). -->
-        <meta-data
-            android:name="com.google.mlkit.vision.DEPENDENCIES"
-            android:value="barcode_ui" />
         <!-- Portrait-only for now — the home and every current game controller are
              portrait; revisit per-game when a landscape controller ships. -->
         <activity

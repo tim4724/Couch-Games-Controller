@@ -68,8 +68,14 @@ dependencies {
   implementation(libs.androidx.lifecycle.runtime.ktx)
   implementation(libs.androidx.activity.compose)
 
-  // QR scanning — Google Play Services code scanner (on-device, no CAMERA permission)
-  implementation(libs.play.services.code.scanner)
+  // QR scanning — in-app CameraX preview + bundled ML Kit barcode model. Bundled
+  // (vs Play Services code scanner) so scanning works without Google Play Services
+  // and without a first-use module download; see ScanScreen.kt.
+  implementation(libs.androidx.camera.camera2)
+  implementation(libs.androidx.camera.lifecycle)
+  implementation(libs.androidx.camera.view)
+  implementation(libs.androidx.camera.mlkit.vision)
+  implementation(libs.mlkit.barcode.scanning)
 
   // Open-source license list (About screen)
   implementation(libs.aboutlibraries.compose.m3)

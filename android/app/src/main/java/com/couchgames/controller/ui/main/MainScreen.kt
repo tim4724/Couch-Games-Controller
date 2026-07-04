@@ -1,6 +1,5 @@
 package com.couchgames.controller.ui.main
 
-import android.content.Context
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
@@ -98,10 +97,6 @@ import com.couchgames.controller.ui.components.GameArt
 import com.couchgames.controller.ui.components.MirrorHostSystemBars
 import com.couchgames.controller.ui.components.PlayerChip
 import com.couchgames.controller.ui.components.stableScreenInsets
-import com.google.mlkit.common.MlKitException
-import com.google.mlkit.vision.barcode.common.Barcode
-import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
-import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -123,6 +118,7 @@ fun MainScreen(
   var profile by remember { mutableStateOf(ProfileStore.load(context)) }
   var showProfile by remember { mutableStateOf(false) }
   var afterName by remember { mutableStateOf<AfterName?>(null) }
+  var showScanner by remember { mutableStateOf(false) }
   var showCodeEntry by remember { mutableStateOf(false) }
   var codeLoading by remember { mutableStateOf(false) }
   var codeError by remember { mutableStateOf<String?>(null) }
@@ -130,15 +126,17 @@ fun MainScreen(
   var infoGame by remember { mutableStateOf<Game?>(null) }
 
   // Every successful join funnels through here: remember the room for one-tap
-  // rejoin and open the game host.
+  // rejoin and open the game host. Closes the scanner too, so leaving the game
+  // lands back on home, not on a live camera.
   fun launchJoin(target: JoinOutcome.Success, p: Profile) {
     haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+    showScanner = false
     RecentRoomStore.save(context, target)
     onJoin(withProfile(target.joinUrl, p), target.game.name, target.game.hosts)
   }
 
-  // Every failure surface — a bad scan, a dead room, an unavailable scanner —
-  // pairs the toast with a rejection buzz, mirroring iOS's error haptic.
+  // Every failure surface — a bad link, a dead room — pairs the toast with a
+  // rejection buzz, mirroring iOS's error haptic.
   fun fail(message: String, length: Int = Toast.LENGTH_SHORT) {
     haptics.performHapticFeedback(HapticFeedbackType.Reject)
     Toast.makeText(context, message, length).show()
@@ -146,7 +144,7 @@ fun MainScreen(
 
   fun perform(action: AfterName, p: Profile) {
     when (action) {
-      AfterName.Scan -> startScan(context, games, ::fail) { launchJoin(it, p) }
+      AfterName.Scan -> showScanner = true
       AfterName.EnterCode -> { codeError = null; showCodeEntry = true }
       is AfterName.Join -> launchJoin(action.target, p)
     }
@@ -202,56 +200,67 @@ fun MainScreen(
 
   // Games scroll the full screen; the join card floats over the list at the bottom.
   // The trailing Spacer, sized off the card's measured height, keeps the last
-  // poster reachable.
+  // poster reachable. The scanner overlay sits in the same root Box but OUTSIDE
+  // the inset padding — the camera runs edge to edge and pads its own controls.
   var joinCardHeightPx by remember { mutableStateOf(0) }
-  Box(
-    modifier
-      .fillMaxSize()
-      .windowInsetsPadding(stableScreenInsets),
-  ) {
-    Column(
+  Box(modifier.fillMaxSize()) {
+    Box(
       Modifier
         .fillMaxSize()
-        .verticalScroll(rememberScrollState()),
+        .windowInsetsPadding(stableScreenInsets),
     ) {
-      // Sits OUTSIDE the 16dp content margin (owns its own padding, like the
-      // in-game LeaveBar) so the title and name chip align across screens.
-      HomeTopBar(profile = profile, onEditProfile = { showProfile = true }, onOpenAbout = onOpenAbout)
       Column(
         Modifier
-          .padding(horizontal = 16.dp)
-          .padding(top = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
+          .fillMaxSize()
+          .verticalScroll(rememberScrollState()),
       ) {
-        // A relay-confirmed room springs the rejoin card in; when the room dies it
-        // springs back out. Retain the last target so the exit animation still has
-        // content to render after `rejoin` clears (mirrors iOS's scale+fade).
-        var lastRejoin by remember { mutableStateOf<RejoinTarget?>(null) }
-        LaunchedEffect(rejoin) { rejoin?.let { lastRejoin = it } }
-        AnimatedVisibility(
-          visible = rejoin != null,
-          enter = fadeIn() + scaleIn(initialScale = 0.96f),
-          exit = fadeOut() + scaleOut(targetScale = 0.96f),
+        // Sits OUTSIDE the 16dp content margin (owns its own padding, like the
+        // in-game LeaveBar) so the title and name chip align across screens.
+        HomeTopBar(profile = profile, onEditProfile = { showProfile = true }, onOpenAbout = onOpenAbout)
+        Column(
+          Modifier
+            .padding(horizontal = 16.dp)
+            .padding(top = 8.dp),
+          verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-          lastRejoin?.let { target ->
-            RejoinCard(target) { resolveAndJoin(target.room.joinUrl) }
+          // A relay-confirmed room springs the rejoin card in; when the room dies it
+          // springs back out. Retain the last target so the exit animation still has
+          // content to render after `rejoin` clears (mirrors iOS's scale+fade).
+          var lastRejoin by remember { mutableStateOf<RejoinTarget?>(null) }
+          LaunchedEffect(rejoin) { rejoin?.let { lastRejoin = it } }
+          AnimatedVisibility(
+            visible = rejoin != null,
+            enter = fadeIn() + scaleIn(initialScale = 0.96f),
+            exit = fadeOut() + scaleOut(targetScale = 0.96f),
+          ) {
+            lastRejoin?.let { target ->
+              RejoinCard(target) { resolveAndJoin(target.room.joinUrl) }
+            }
           }
+          GamesSection(games, onOpen = { infoGame = it })
+          Spacer(Modifier.height(with(LocalDensity.current) { joinCardHeightPx.toDp() } + 12.dp))
         }
-        GamesSection(games, onOpen = { infoGame = it })
-        Spacer(Modifier.height(with(LocalDensity.current) { joinCardHeightPx.toDp() } + 12.dp))
       }
+      JoinCard(
+        host = games.firstOrNull { it.isLive }?.displayHost ?: LAUNCHER_HOST,
+        onScan = { requireName(AfterName.Scan) },
+        onEnterCode = { requireName(AfterName.EnterCode) },
+        modifier = Modifier
+          .align(Alignment.BottomCenter)
+          // Measured OUTSIDE the margins so the spacer clears card + margins.
+          .onGloballyPositioned { joinCardHeightPx = it.size.height }
+          .padding(horizontal = 12.dp)
+          .padding(bottom = 12.dp),
+      )
     }
-    JoinCard(
-      host = games.firstOrNull { it.isLive }?.displayHost ?: LAUNCHER_HOST,
-      onScan = { requireName(AfterName.Scan) },
-      onEnterCode = { requireName(AfterName.EnterCode) },
-      modifier = Modifier
-        .align(Alignment.BottomCenter)
-        // Measured OUTSIDE the margins so the spacer clears card + margins.
-        .onGloballyPositioned { joinCardHeightPx = it.size.height }
-        .padding(horizontal = 12.dp)
-        .padding(bottom = 12.dp),
-    )
+    if (showScanner) {
+      ScanScreen(
+        games = games,
+        onJoin = { launchJoin(it, profile) },
+        onEnterCode = { codeError = null; showCodeEntry = true },
+        onClose = { showScanner = false },
+      )
+    }
   }
 
   if (showProfile) {
@@ -320,32 +329,6 @@ private sealed interface AfterName {
 
 // A relay-confirmed alive room from a previous session.
 private data class RejoinTarget(val room: RecentRoom, val game: Game)
-
-// Play Services code scanner — on-device, no CAMERA permission needed.
-private fun startScan(
-  context: Context,
-  games: List<Game>,
-  onFailure: (message: String, length: Int) -> Unit,
-  onResolved: (JoinOutcome.Success) -> Unit,
-) {
-  val options = GmsBarcodeScannerOptions.Builder()
-    .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
-    .build()
-  GmsBarcodeScanning.getClient(context, options).startScan()
-    .addOnSuccessListener { barcode ->
-      when (val r = JoinResolver.resolve(barcode.rawValue, games)) {
-        is JoinOutcome.Success -> onResolved(r)
-        is JoinOutcome.Failure -> onFailure(r.message, Toast.LENGTH_SHORT)
-      }
-    }
-    .addOnCanceledListener { /* user backed out — not an error */ }
-    .addOnFailureListener { e ->
-      // Backing out of the scanner surfaces here as CODE_SCANNER_CANCELLED —
-      // it's a dismissal, not a failure, so stay silent (no toast, no buzz).
-      if (e is MlKitException && e.errorCode == MlKitException.CODE_SCANNER_CANCELLED) return@addOnFailureListener
-      onFailure("Scanner unavailable: ${e.message}", Toast.LENGTH_LONG)
-    }
-}
 
 // Home chrome, structurally identical to the in-game LeaveBar so the title and
 // name chip land in the same place across screens (GameHostScreen.kt).

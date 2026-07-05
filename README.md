@@ -30,8 +30,8 @@ echo "sdk.dir=$HOME/Library/Android/sdk" > local.properties   # once per checkou
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-QR scanning runs inside Play Services (`GmsBarcodeScanning`, no CAMERA
-permission), so the scan flow needs a device or emulator with Play Services.
+QR scanning is an in-app CameraX + ML Kit scanner (CAMERA permission, with
+manual room-code entry as the fallback).
 
 ## iOS: build & run
 
@@ -43,6 +43,25 @@ open CouchGames.xcodeproj
 
 QR scanning uses AVFoundation (camera permission) and degrades to manual
 room-code entry in the simulator.
+
+## Localization
+
+Both apps ship the 11 HexStacker locales (en + de, es, fr, it, ja, ko, pt, ru,
+tr, zh): Android in `res/values[-XX]/strings.xml`, iOS in
+`CouchGames/Resources/*.xcstrings`. Per-game display copy (e.g. player counts)
+lives in those same string resources under `game_<id>_*` keys, resolved by game
+id at load time — `games-manifest.json` itself is purely structural and holds no
+translated text.
+
+```sh
+python3 tools/check_l10n_sync.py
+```
+
+verifies the three stay in sync: locale coverage on both platforms, identical
+translations for every text both apps share (matched via the English source),
+and byte-identical manifest copies. Platform-only strings are declared in the
+script's `ANDROID_ONLY` / `IOS_ONLY` lists — an undeclared one-sided string
+fails the check. Run it after any string change.
 
 ## Where things live
 

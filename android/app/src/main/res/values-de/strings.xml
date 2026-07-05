@@ -30,7 +30,7 @@
     <string name="flashlight_off">Taschenlampe ausschalten</string>
     <string name="scan_hint">Scanne den QR-Code auf deinem Fernseher oder Laptop</string>
     <string name="camera_access_needed">Kamerazugriff benötigt</string>
-    <string name="camera_access_rationale">Erlaube den Kamerazugriff, um den Code auf deinem Fernseher zu scannen — oder gib stattdessen den Raumcode ein.</string>
+    <string name="camera_access_rationale">Erlaube den Zugriff auf die Kamera, um den Code zu scannen, oder gib den Raumcode ein.</string>
     <string name="allow_camera_access">Kamerazugriff erlauben</string>
 
     <string name="joining_game">Trete %1$s bei…</string>

@@ -30,7 +30,7 @@
     <string name="flashlight_off">El fenerini kapat</string>
     <string name="scan_hint">TV\'ndeki veya bilgisayarındaki QR kodu tara</string>
     <string name="camera_access_needed">Kamera erişimi gerekli</string>
-    <string name="camera_access_rationale">TV\'deki kodu taramak için kamera erişimine izin ver — ya da oda kodunu elle gir.</string>
+    <string name="camera_access_rationale">TV\'deki kodu taramak için kamera erişimine izin ver ya da oda kodunu elle gir.</string>
     <string name="allow_camera_access">Kamera erişimine izin ver</string>
 
     <string name="joining_game">%1$s oyununa katılınıyor…</string>

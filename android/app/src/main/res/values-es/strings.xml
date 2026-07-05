@@ -15,7 +15,7 @@
 
     <string name="enter_room_code">Introducir código de sala</string>
     <string name="code_placeholder">p. ej. A3KX9p</string>
-    <string name="joining">Uniéndose…</string>
+    <string name="joining">Uniéndote…</string>
     <string name="join">Jugar</string>
     <string name="cancel">Cancelar</string>
 
@@ -33,7 +33,7 @@
     <string name="camera_access_rationale">Permite el acceso a la cámara para escanear el código de tu TV, o escribe el código de sala en su lugar.</string>
     <string name="allow_camera_access">Permitir acceso a la cámara</string>
 
-    <string name="joining_game">Uniéndose a %1$s…</string>
+    <string name="joining_game">Uniéndote a %1$s…</string>
     <string name="leave_game">Salir del juego</string>
 
     <string name="back">Volver</string>

@@ -783,7 +783,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Uniéndose a %@…"
+            "value": "Uniéndote a %@…"
           }
         },
         "fr": {
@@ -847,7 +847,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Uniéndose…"
+            "value": "Uniéndote…"
           }
         },
         "fr": {
@@ -1633,13 +1633,13 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ルームが満員"
+            "value": "ルームが満員です"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "방이 가득 찼어"
+            "value": "방이 가득 찼어요"
           }
         },
         "pt": {
@@ -1697,13 +1697,13 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ルームが見つからない"
+            "value": "ルームが見つかりません"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "방을 찾을 수 없어"
+            "value": "방을 찾을 수 없어요"
           }
         },
         "pt": {

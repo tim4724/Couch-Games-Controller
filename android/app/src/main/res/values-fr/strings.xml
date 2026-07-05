@@ -30,7 +30,7 @@
     <string name="flashlight_off">Désactiver la lampe torche</string>
     <string name="scan_hint">Scanne le QR code sur ta TV ou ton ordinateur</string>
     <string name="camera_access_needed">Accès à la caméra requis</string>
-    <string name="camera_access_rationale">Autorise l’accès à la caméra pour scanner le code sur ta TV — ou saisis le code de la salle à la place.</string>
+    <string name="camera_access_rationale">Autorise l’accès à la caméra pour scanner le code sur ta TV, ou saisis le code de la salle.</string>
     <string name="allow_camera_access">Autoriser la caméra</string>
 
     <string name="joining_game">Connexion à %1$s…</string>

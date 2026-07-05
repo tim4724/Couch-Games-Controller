@@ -1,6 +1,7 @@
 <resources>
-    <!-- Japanese. Shared terms (ルーム, 運営者情報, room_not_found/game_full copy)
-         match HexStacker-Party's i18n. -->
+    <!-- Japanese. Shared vocabulary (ルーム, 運営者情報) matches HexStacker-Party's
+         i18n; register is localized to this app's polite です/ます (HexStacker uses
+         terse plain-form status chips, so game_end_* are phrased politely here). -->
     <string name="home_subtitle">コントローラー</string>
     <string name="about">このアプリについて</string>
     <string name="rejoin_game">%1$sに再参加</string>
@@ -41,8 +42,8 @@
     <string name="imprint">運営者情報</string>
     <string name="open_source_licenses">オープンソースライセンス</string>
 
-    <string name="game_end_room_not_found">ルームが見つからない</string>
-    <string name="game_end_room_full">ルームが満員</string>
+    <string name="game_end_room_not_found">ルームが見つかりません</string>
+    <string name="game_end_room_full">ルームが満員です</string>
     <string name="game_end_replaced">別のデバイスから参加しました</string>
     <string name="game_end_generic">パーティーが終了しました</string>
 

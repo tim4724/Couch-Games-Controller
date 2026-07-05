@@ -30,7 +30,7 @@
     <string name="flashlight_off">Desligar a lanterna</string>
     <string name="scan_hint">Escaneie o código QR na sua TV ou computador</string>
     <string name="camera_access_needed">Acesso à câmera necessário</string>
-    <string name="camera_access_rationale">Permita o acesso à câmera para escanear o código na sua TV — ou digite o código da sala.</string>
+    <string name="camera_access_rationale">Permita o acesso à câmera para escanear o código na sua TV, ou digite o código da sala.</string>
     <string name="allow_camera_access">Permitir acesso à câmera</string>
 
     <string name="joining_game">Entrando em %1$s…</string>

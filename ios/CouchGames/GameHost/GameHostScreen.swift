@@ -28,6 +28,11 @@ struct GameHostScreen: View {
     @State private var renameRequest: RenameRequest? = nil
     @State private var loading = true
     @State private var pageTheme = PageTheme()
+    // The page's own <title> supersedes the manifest name in the Leave bar once the
+    // controller reports one, so games not (yet) in the bundled manifest still show a
+    // real name instead of the generic "Couch Games" fallback. Nil until the page
+    // reports; the manifest name covers the join cover and any title-less page.
+    @State private var pageTitle: String? = nil
     @State private var chromeHeight: CGFloat = 0
     @State private var chromeWidth: CGFloat = 0
     @State private var chipRight: CGFloat = 0
@@ -38,6 +43,9 @@ struct GameHostScreen: View {
     private var allowed: [String] {
         (allowedHosts + [CG.launcherHost]).map { $0.lowercased() }
     }
+
+    /// The page's own title once reported, else the manifest name.
+    private var displayTitle: String { pageTitle ?? title }
 
     /// A game-supplied accent flows through `primary`, so every launcher accent
     /// over the game (chip, spinner, rename sheet) follows.
@@ -91,7 +99,8 @@ struct GameHostScreen: View {
                 safeZone: computedSafeZone,
                 onLoaded: { withAnimation(.easeOut(duration: 0.3)) { loading = false } },
                 onGameEnd: onGameEnd,
-                onThemeChanged: { pageTheme = $0 }
+                onThemeChanged: { pageTheme = $0 },
+                onTitleChanged: { pageTitle = $0 }
             )
             .ignoresSafeArea()
 
@@ -156,7 +165,7 @@ struct GameHostScreen: View {
                 VStack(spacing: 16) {
                     ProgressView()
                         .tint(hostPalette.primary)  // adopts the accent if the theme beat page-finish
-                    Text("Joining \(title)…")
+                    Text("Joining \(displayTitle)…")
                         .font(.cgBodyMedium)
                         .foregroundStyle(hostPalette.onSurfaceVariant)
                 }
@@ -170,7 +179,7 @@ struct GameHostScreen: View {
     private var chrome: some View {
         VStack(spacing: 0) {
             LeaveBar(
-                title: title,
+                title: displayTitle,
                 playerName: profile.name,
                 barContent: barContent,
                 accented: pageTheme.accent != nil,

@@ -84,13 +84,20 @@ enum RecentRoomStore {
         if game != nil { favicon = captured }
     }
 
-    static func putTitle(_ raw: String) {
+    /// Sanitizes `raw` (trim, collapse whitespace, cap length), stores it as the
+    /// active room's title, and returns the cleaned value so callers can display the
+    /// same text. Nil when there's no active room or nothing survives cleaning.
+    @discardableResult
+    static func putTitle(_ raw: String) -> String? {
         let clean = raw
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
             .prefix(maxTitleLength)
         lock.lock(); defer { lock.unlock() }
-        if game != nil, !clean.isEmpty { title = String(clean) }
+        guard game != nil, !clean.isEmpty else { return nil }
+        let cleaned = String(clean)
+        title = cleaned
+        return cleaned
     }
 
     /// The current room while still fresh, else nil (clearing an aged-out slot).

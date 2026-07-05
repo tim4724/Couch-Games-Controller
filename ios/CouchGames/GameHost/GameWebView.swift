@@ -43,10 +43,12 @@ struct GameWebView: UIViewRepresentable {
     let onLoaded: () -> Void           // every didFinish
     let onGameEnd: (String?) -> Void   // fire-once enforced by Coordinator
     let onThemeChanged: (PageTheme) -> Void
+    let onTitleChanged: (String) -> Void  // the page's <title>, trimmed & non-empty
 
     init(joinUrl: String, allowedDomains: [String], playerName: String, safeZone: SafeZone,
          onLoaded: @escaping () -> Void, onGameEnd: @escaping (String?) -> Void,
-         onThemeChanged: @escaping (PageTheme) -> Void) {
+         onThemeChanged: @escaping (PageTheme) -> Void,
+         onTitleChanged: @escaping (String) -> Void) {
         self.joinUrl = joinUrl
         self.allowedDomains = allowedDomains
         self.playerName = playerName
@@ -54,6 +56,7 @@ struct GameWebView: UIViewRepresentable {
         self.onLoaded = onLoaded
         self.onGameEnd = onGameEnd
         self.onThemeChanged = onThemeChanged
+        self.onTitleChanged = onTitleChanged
     }
 
     func makeCoordinator() -> Coordinator {
@@ -186,9 +189,12 @@ struct GameWebView: UIViewRepresentable {
             webView.evaluateJavaScript(GameHostJS.watchPageTheme, completionHandler: nil)
             webView.evaluateJavaScript(GameHostJS.safeZonePush(parent.safeZone), completionHandler: nil)
             captureFavicon(webView)
-            // The page's own name for the rejoin card (ground truth over the manifest).
-            if let title = webView.title, !title.isEmpty {
-                RecentRoomStore.putTitle(title)
+            // The page's own name (ground truth over the manifest): drives the Leave
+            // bar and feeds the home rejoin card, so games not in the bundled manifest
+            // still show a real name instead of the generic fallback. putTitle returns
+            // the sanitized text so the bar shows exactly what the card stores.
+            if let raw = webView.title, let clean = RecentRoomStore.putTitle(raw) {
+                parent.onTitleChanged(clean)
             }
         }
 

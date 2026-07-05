@@ -3,7 +3,7 @@
   "games": [
     {
       "id": "hexstacker",
-      "name": "HexStacker Party",
+      "name": "HexStacker",
       "status": "live",
       "art": "/artwork/hexstacker-16x9.webp",
       "video": "hexstacker_trailer",

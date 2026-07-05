@@ -53,11 +53,16 @@ object RecentRoomStore {
     synchronized(this) { if (game != null) favicon = captured }
   }
 
+  /** Sanitizes [raw] (trim, collapse whitespace, cap length), stores it as the
+   *  active room's title, and returns the cleaned value so callers can display the
+   *  same text. Null when there's no active room or nothing survives cleaning. */
   @Synchronized
-  fun putTitle(raw: String) {
-    if (game == null) return
+  fun putTitle(raw: String): String? {
+    if (game == null) return null
     val clean = raw.trim().replace(Regex("\\s+"), " ").take(MAX_TITLE_LEN)
-    if (clean.isNotEmpty()) title = clean
+    if (clean.isEmpty()) return null
+    title = clean
+    return clean
   }
 
   /** The current room while still fresh, else null (clearing an aged-out slot). */

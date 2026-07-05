@@ -141,6 +141,12 @@ private fun GameHostContent(
   var profile by remember { mutableStateOf(ProfileStore.load(context)) }
   var showProfile by remember { mutableStateOf(false) }
   var loading by remember { mutableStateOf(true) }
+  // The page's own <title> supersedes the manifest name in the LEAVE bar once the
+  // controller reports one, so games not (yet) in the bundled manifest still show a
+  // real name instead of the generic "Couch Games" fallback. Null until the page
+  // reports; the manifest name covers the join cover and any title-less page.
+  var pageTitle by remember { mutableStateOf<String?>(null) }
+  val displayTitle = pageTitle ?: title
   val surfaceArgb = MaterialTheme.colorScheme.surface.toArgb()
   // The bridge outlives recompositions but must call the CURRENT callbacks —
   // hence rememberUpdatedState.
@@ -326,9 +332,12 @@ private fun GameHostContent(
               if (icon != null) RecentRoomStore.putFavicon(icon)
             }
 
-            // The page's own name for the rejoin card (ground truth over the manifest).
+            // The page's own name (ground truth over the manifest): drives the LEAVE
+            // bar live and feeds the home rejoin card. Fires on every document.title
+            // change, so late SPA renames are picked up too.
             override fun onReceivedTitle(view: WebView?, title: String?) {
-              if (!title.isNullOrBlank()) RecentRoomStore.putTitle(title)
+              if (title == null) return
+              RecentRoomStore.putTitle(title)?.let { pageTitle = it }
             }
           }
           keepScreenOn = true
@@ -364,7 +373,7 @@ private fun GameHostContent(
           ) {
             CircularProgressIndicator()
             Text(
-              stringResource(R.string.joining_game, title),
+              stringResource(R.string.joining_game, displayTitle),
               style = MaterialTheme.typography.bodyMedium,
               color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -397,7 +406,7 @@ private fun GameHostContent(
         ),
     ) {
       LeaveBar(
-        title = title,
+        title = displayTitle,
         playerName = profile.name,
         onLeave = onLeave,
         onEditName = { showProfile = true },

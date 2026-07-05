@@ -127,14 +127,19 @@ struct MainScreen: View {
                     chipButton(labelColor: nil)
                 }
             }
-            // About — always visible in the bar.
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    onOpenAbout()
-                } label: {
-                    Image(systemName: "info.circle")
+            // About — always visible in the bar. Same glass treatment as the chip:
+            // its own glass container (shared background hidden) so the icon adapts
+            // to the poster art beneath rather than sitting on a fixed tint.
+            if #available(iOS 26.0, *) {
+                ToolbarItem(placement: .topBarTrailing) {
+                    aboutButton()
+                        .buttonStyle(.glass)
                 }
-                .accessibilityLabel("About")
+                .sharedBackgroundVisibility(.hidden)
+            } else {
+                ToolbarItem(placement: .topBarTrailing) {
+                    aboutButton()
+                }
             }
         }
         .sensoryFeedback(.success, trigger: successTick)
@@ -248,6 +253,18 @@ struct MainScreen: View {
             }
             .foregroundStyle(labelColor ?? Color.primary)
         }
+    }
+
+    private func aboutButton() -> some View {
+        Button {
+            onOpenAbout()
+        } label: {
+            // .primary rides the glass legibility adaptation; the default accent
+            // tint would pin the color and ignore the poster art beneath the bar.
+            Image(systemName: "info.circle")
+                .foregroundStyle(Color.primary)
+        }
+        .accessibilityLabel("About")
     }
 
     // MARK: Join funnel

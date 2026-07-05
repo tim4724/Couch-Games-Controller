@@ -7,8 +7,17 @@ enum ProfileStore {
 
     private static let nameKey = "cg_profile.name"
 
+    /// Get-or-create: returns the stored name, or on first launch mints a `FunnyName`
+    /// and persists it — so every screen's load() reads the same identity instead of
+    /// each minting its own.
     static func load(defaults: UserDefaults = .standard) -> Profile {
-        Profile(name: defaults.string(forKey: nameKey) ?? "")
+        let stored = defaults.string(forKey: nameKey) ?? ""
+        if !stored.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return Profile(name: stored)
+        }
+        let minted = Profile(name: FunnyName.random())
+        save(minted, defaults: defaults)
+        return minted
     }
 
     /// Writes the name verbatim — no trimming on save.

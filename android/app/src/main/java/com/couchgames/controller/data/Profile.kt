@@ -12,13 +12,47 @@ data class Profile(val name: String = "") {
   val isSet: Boolean get() = name.isNotBlank()
 }
 
+/**
+ * Wholesome-funny fallback identity. Every device gets a random "Adjective Noun"
+ * handle on first launch (see [ProfileStore.load]) so players jump straight into a
+ * game instead of hitting a name wall — they can still rename or reroll (the 🎲 in
+ * ProfileSheet). English-only by design (v1): gamer tags read as English across all
+ * our locales, and it sidesteps a per-culture review of 500+ combos. Every word is
+ * ≤7 chars so "Adjective Noun" always fits Contract v1's 16-char cgName. Keep this
+ * list in sync with the iOS FunnyName in Models.swift.
+ */
+object FunnyName {
+  private val ADJECTIVES = listOf(
+    "Sneaky", "Turbo", "Wobbly", "Grumpy", "Sleepy", "Sparkly",
+    "Chunky", "Zesty", "Feral", "Mighty", "Salty", "Cosmic",
+    "Fluffy", "Rowdy", "Spicy", "Jolly", "Bouncy", "Cheeky",
+    "Groovy", "Snazzy", "Wacky", "Zippy", "Plucky", "Silly",
+  )
+  private val NOUNS = listOf(
+    "Otter", "Pigeon", "Waffle", "Noodle", "Muffin", "Goblin",
+    "Wizard", "Llama", "Gecko", "Taco", "Yeti", "Panda",
+    "Nugget", "Pickle", "Walrus", "Cactus", "Toaster", "Raccoon",
+    "Narwhal", "Penguin", "Hamster", "Biscuit", "Wombat", "Falcon",
+  )
+
+  /** e.g. "Grumpy Waffle". Always non-blank and ≤16 chars. */
+  fun random(): String = "${ADJECTIVES.random()} ${NOUNS.random()}"
+}
+
 object ProfileStore {
   private const val PREFS = "cg_profile"
   private const val KEY_NAME = "name"
 
+  /**
+   * Get-or-create: returns the stored name, or on first launch mints a [FunnyName]
+   * and persists it — so every screen's load() reads the same identity instead of
+   * each minting its own.
+   */
   fun load(context: Context): Profile {
     val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-    return Profile(p.getString(KEY_NAME, "").orEmpty())
+    val stored = p.getString(KEY_NAME, "").orEmpty()
+    if (stored.isNotBlank()) return Profile(stored)
+    return Profile(FunnyName.random()).also { save(context, it) }
   }
 
   fun save(context: Context, profile: Profile) {

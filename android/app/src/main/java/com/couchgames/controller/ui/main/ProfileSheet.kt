@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -20,6 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import com.couchgames.controller.R
+import com.couchgames.controller.data.FunnyName
 import com.couchgames.controller.data.Profile
 import com.couchgames.controller.ui.components.AppSheet
 
@@ -51,6 +53,9 @@ fun ProfileSheet(
         onValueChange = { if (it.length <= 16) name = it },
         singleLine = true,
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+        trailingIcon = {
+          IconButton(onClick = { name = FunnyName.random() }) { Text("🎲") }
+        },
         modifier = Modifier.fillMaxWidth(),
       )
       Button(

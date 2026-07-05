@@ -32,22 +32,28 @@ struct ProfileSheet: View {
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(palette.onSurface)
 
-            TextField("", text: $name)
-                .textInputAutocapitalization(.words)
-                .font(.cgBodyLarge)
-                .foregroundStyle(palette.onSurface)
-                .padding(.horizontal, 16)
-                .frame(height: 52)
-                .frame(maxWidth: .infinity)
-                .background(
-                    Color(uiColor: .tertiarySystemFill),
-                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-                )
-                .onChange(of: name) { _, newValue in
-                    if newValue.count > 16 {
-                        name = String(newValue.prefix(16))
+            HStack(spacing: 8) {
+                TextField("", text: $name)
+                    .textInputAutocapitalization(.words)
+                    .font(.cgBodyLarge)
+                    .foregroundStyle(palette.onSurface)
+                    .onChange(of: name) { _, newValue in
+                        if newValue.count > 16 {
+                            name = String(newValue.prefix(16))
+                        }
                     }
+                Button { name = FunnyName.random() } label: {
+                    Text("🎲").font(.title3)
                 }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 52)
+            .frame(maxWidth: .infinity)
+            .background(
+                Color(uiColor: .tertiarySystemFill),
+                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+            )
 
             Button {
                 onSave(Profile(name: trimmedName))

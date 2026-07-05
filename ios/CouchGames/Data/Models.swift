@@ -195,4 +195,33 @@ struct Profile: Equatable {
     }
 }
 
+// MARK: - FunnyName
+
+/// Wholesome-funny fallback identity. Every device gets a random "Adjective Noun"
+/// handle on first launch (see `ProfileStore.load`) so players jump straight into a
+/// game instead of hitting a name wall — they can still rename or reroll (the 🎲 in
+/// ProfileSheet). English-only by design (v1): gamer tags read as English across all
+/// our locales, and it sidesteps a per-culture review of 500+ combos. Every word is
+/// ≤7 chars so "Adjective Noun" always fits Contract v1's 16-char cgName. Keep this
+/// list in sync with the Android FunnyName in Profile.kt.
+enum FunnyName {
+    private static let adjectives = [
+        "Sneaky", "Turbo", "Wobbly", "Grumpy", "Sleepy", "Sparkly",
+        "Chunky", "Zesty", "Feral", "Mighty", "Salty", "Cosmic",
+        "Fluffy", "Rowdy", "Spicy", "Jolly", "Bouncy", "Cheeky",
+        "Groovy", "Snazzy", "Wacky", "Zippy", "Plucky", "Silly",
+    ]
+    private static let nouns = [
+        "Otter", "Pigeon", "Waffle", "Noodle", "Muffin", "Goblin",
+        "Wizard", "Llama", "Gecko", "Taco", "Yeti", "Panda",
+        "Nugget", "Pickle", "Walrus", "Cactus", "Toaster", "Raccoon",
+        "Narwhal", "Penguin", "Hamster", "Biscuit", "Wombat", "Falcon",
+    ]
+
+    /// e.g. "Grumpy Waffle". Always non-blank and ≤16 chars.
+    static func random() -> String {
+        "\(adjectives.randomElement()!) \(nouns.randomElement()!)"
+    }
+}
+
 // RecentRoom (and its single-slot in-memory store) live in Stores.swift.

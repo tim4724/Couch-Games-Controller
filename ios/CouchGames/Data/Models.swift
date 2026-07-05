@@ -4,8 +4,10 @@ import Foundation
 // MARK: - Global constants
 
 enum CG {
-    /// Default room-code charset. Case-sensitive; deliberately excludes 0, O, I, l.
+    /// Room codes are minted by the shared relay, so the format is suite-wide, not
+    /// per game: Base58 (case-sensitive, excludes 0 O I l), six characters.
     static let base58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+    static let roomCodeLength = 6
     /// Fallback accent ("suite indigo") for missing/invalid accent colors and the synthetic launcher.
     static let defaultAccent = Color(cgHex: 0x6C5CE7)
     /// Shared relay for all games; doubles as the room -> controller directory. No trailing slash.
@@ -24,37 +26,28 @@ struct Game: Identifiable, Hashable {
     let id: String
     let name: String
     let status: String
-    let tagline: String
     let players: String?
     let video: String?
     let accentColor: Color
     let art: String?
     let controllerBaseUrl: String?
     let hosts: [String]
-    let roomCodeCharset: String
-    let roomCodeLength: Int
     let relayProbeBase: String?
-    let comingSoonNote: String?
 
-    init(id: String, name: String, status: String = "soon", tagline: String = "",
+    init(id: String, name: String, status: String = "soon",
          players: String? = nil, video: String? = nil, accentColor: Color = CG.defaultAccent,
          art: String? = nil, controllerBaseUrl: String? = nil, hosts: [String] = [],
-         roomCodeCharset: String = CG.base58, roomCodeLength: Int = 6,
-         relayProbeBase: String? = nil, comingSoonNote: String? = nil) {
+         relayProbeBase: String? = nil) {
         self.id = id
         self.name = name
         self.status = status
-        self.tagline = tagline
         self.players = players
         self.video = video
         self.accentColor = accentColor
         self.art = art
         self.controllerBaseUrl = controllerBaseUrl
         self.hosts = hosts
-        self.roomCodeCharset = roomCodeCharset
-        self.roomCodeLength = roomCodeLength
         self.relayProbeBase = relayProbeBase
-        self.comingSoonNote = comingSoonNote
     }
 
     /// Exact, case-sensitive comparison against "live".
@@ -87,13 +80,13 @@ enum GamesManifest {
                   let entries = root["games"] as? [Any] else {
                 return []
             }
-            return try entries.map { try parseGame($0) }
+            return try entries.map { try parseGame($0, bundle: bundle) }
         } catch {
             return []
         }
     }
 
-    private static func parseGame(_ raw: Any) throws -> Game {
+    private static func parseGame(_ raw: Any, bundle: Bundle) throws -> Game {
         guard let obj = raw as? [String: Any],
               let id = obj["id"] as? String,
               let name = obj["name"] as? String else {
@@ -101,8 +94,8 @@ enum GamesManifest {
         }
 
         let status = (obj["status"] as? String) ?? "soon"
-        let tagline = (obj["tagline"] as? String) ?? ""
-        let players = blankToNil(obj["players"])
+        // Per-game display copy lives in string resources, keyed by game id.
+        let players = localizedByKey("game_\(id)_players", bundle: bundle)
         let video = blankToNil(obj["video"])
         let accentColor = parseHexColor((obj["accentColor"] as? String) ?? "")
 
@@ -120,26 +113,19 @@ enum GamesManifest {
             relayProbeBase = stripped
         }
 
-        let comingSoonNote = blankToNil(obj["comingSoonNote"])
         let hosts = (obj["hosts"] as? [Any])?.compactMap { $0 as? String } ?? []
 
-        var roomCodeCharset = CG.base58
-        var roomCodeLength = 6
-        if let fmt = obj["roomCodeFormat"] as? [String: Any] {
-            if let charset = fmt["charset"] as? String,
-               !charset.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                roomCodeCharset = charset
-            }
-            if let length = fmt["length"] as? NSNumber {
-                roomCodeLength = length.intValue
-            }
-        }
-
-        return Game(id: id, name: name, status: status, tagline: tagline,
+        return Game(id: id, name: name, status: status,
                     players: players, video: video, accentColor: accentColor,
                     art: art, controllerBaseUrl: controllerBaseUrl, hosts: hosts,
-                    roomCodeCharset: roomCodeCharset, roomCodeLength: roomCodeLength,
-                    relayProbeBase: relayProbeBase, comingSoonNote: comingSoonNote)
+                    relayProbeBase: relayProbeBase)
+    }
+
+    /// Resolves a string resource by key (e.g. "game_hexstacker_players"); nil if absent or blank.
+    private static func localizedByKey(_ key: String, bundle: Bundle) -> String? {
+        let sentinel = "\u{0}"
+        let value = bundle.localizedString(forKey: key, value: sentinel, table: nil)
+        return value == sentinel ? nil : blankToNil(value)
     }
 
     /// Absent, non-string, empty, or whitespace-only → nil.

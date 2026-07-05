@@ -1,6 +1,8 @@
 package com.couchgames.controller.data
 
 import android.net.Uri
+import androidx.annotation.StringRes
+import com.couchgames.controller.R
 
 /** The suite's canonical launcher domain (couch-games.com links, display fallback). */
 const val LAUNCHER_HOST = "couch-games.com"
@@ -21,7 +23,7 @@ sealed interface JoinOutcome {
     val joinUrl: String,
   ) : JoinOutcome
 
-  data class Failure(val message: String) : JoinOutcome
+  data class Failure(@param:StringRes val messageRes: Int) : JoinOutcome
 }
 
 /**
@@ -39,7 +41,7 @@ object JoinResolver {
 
   fun resolve(raw: String?, games: List<Game>): JoinOutcome {
     val s = raw?.trim().orEmpty()
-    if (s.isEmpty()) return JoinOutcome.Failure("Empty code.")
+    if (s.isEmpty()) return JoinOutcome.Failure(R.string.error_empty_code)
 
     val uri = runCatching { Uri.parse(s) }.getOrNull()
     val host = uri?.host
@@ -68,21 +70,21 @@ object JoinResolver {
       ?: if (hostInDomain(host, LAUNCHER_HOST)) {
         games.firstOrNull { host.lowercase().startsWith(it.id) } ?: launcherGame()
       } else {
-        return JoinOutcome.Failure("That code isn't a Couch Games room.")
+        return JoinOutcome.Failure(R.string.error_not_couch_games_room)
       }
     return joinAt("https://$host", game, segs.firstOrNull().orEmpty(), claim, instance)
   }
 
   private fun soleLiveGameJoin(games: List<Game>, roomCode: String, claim: String?, instance: String?): JoinOutcome {
     val game = games.firstOrNull { it.isLive }
-      ?: return JoinOutcome.Failure("No live game configured.")
+      ?: return JoinOutcome.Failure(R.string.error_no_live_game)
     val base = game.controllerBaseUrl
-      ?: return JoinOutcome.Failure("That game has no controller URL.")
+      ?: return JoinOutcome.Failure(R.string.error_no_controller_url)
     return joinAt(base, game, roomCode, claim, instance)
   }
 
   private fun joinAt(base: String, game: Game, roomCode: String, claim: String?, instance: String?): JoinOutcome {
-    if (!validCode(roomCode, game)) return JoinOutcome.Failure("That code isn't a Couch Games room.")
+    if (!validCode(roomCode)) return JoinOutcome.Failure(R.string.error_not_couch_games_room)
     val joinUrl = buildString {
       append(base.trimEnd('/')).append('/').append(roomCode)
       if (!claim.isNullOrEmpty()) append("?claim=").append(Uri.encode(claim))
@@ -98,17 +100,14 @@ object JoinResolver {
     id = "couch-games",
     name = "Couch Games",
     status = "live",
-    tagline = "",
     accentColor = DefaultAccent,
     art = null,
     controllerBaseUrl = null,
     hosts = emptyList(),
-    roomCodeCharset = BASE58,
-    roomCodeLength = 6,
   )
 
-  private fun validCode(code: String, game: Game): Boolean {
-    if (code.length != game.roomCodeLength) return false
-    return code.all { it in game.roomCodeCharset }
+  private fun validCode(code: String): Boolean {
+    if (code.length != ROOM_CODE_LENGTH) return false
+    return code.all { it in BASE58 }
   }
 }

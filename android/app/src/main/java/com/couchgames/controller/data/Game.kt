@@ -5,8 +5,10 @@ import android.net.Uri
 import androidx.compose.ui.graphics.Color
 import org.json.JSONObject
 
-// Base58, case-SENSITIVE (excludes 0 O I l) — the HexStacker room-code charset.
+// Room codes are minted by the shared relay, so the format is suite-wide, not
+// per game: Base58 (case-SENSITIVE, excludes 0 O I l), six characters.
 const val BASE58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+const val ROOM_CODE_LENGTH = 6
 
 /** Suite indigo — the accent for games with no (valid) accentColor of their own. */
 val DefaultAccent = Color(0xFF6C5CE7)
@@ -16,20 +18,15 @@ data class Game(
   val id: String,
   val name: String,
   val status: String,            // "live" | "soon"
-  val tagline: String,
   val players: String? = null,   // display copy, e.g. "1–8 players"
   val video: String? = null,     // res/raw resource name of a muted gameplay loop
   val accentColor: Color,
   val art: String?,              // asset-relative path, e.g. "artwork/hexstacker-16x9.webp"
   val controllerBaseUrl: String?,
   val hosts: List<String>,       // domains that resolve to this game (subdomains included)
-  val roomCodeCharset: String,
-  val roomCodeLength: Int,
   // The game's own relay (pre-unification) — where its rooms actually live, so
   // room-alive probes go here rather than the shared directory.
   val relayProbeBase: String? = null,
-  // Optional per-game copy for not-yet-live titles.
-  val comingSoonNote: String? = null,
 ) {
   val isLive: Boolean get() = status == "live"
 
@@ -50,29 +47,32 @@ object GamesManifest {
     val games = JSONObject(text).getJSONArray("games")
     (0 until games.length()).map { i ->
       val g = games.getJSONObject(i)
-      val fmt = g.optJSONObject("roomCodeFormat")
+      val id = g.getString("id")
       val hostsArr = g.optJSONArray("hosts")
       Game(
-        id = g.getString("id"),
+        id = id,
         name = g.getString("name"),
         status = g.optString("status", "soon"),
-        tagline = g.optString("tagline", ""),
-        players = g.optNonBlank("players"),
+        // Per-game display copy lives in string resources, keyed by game id.
+        players = context.optStringByName("game_${id}_players"),
         video = g.optNonBlank("video"),
         accentColor = parseHexColor(g.optString("accentColor", "")),
         art = g.optNonBlank("art")?.removePrefix("/"),
         controllerBaseUrl = g.optNonBlank("controllerBaseUrl"),
         hosts = if (hostsArr != null) (0 until hostsArr.length()).map { hostsArr.getString(it) } else emptyList(),
-        roomCodeCharset = fmt?.optNonBlank("charset") ?: BASE58,
-        roomCodeLength = fmt?.optInt("length", 6) ?: 6,
         relayProbeBase = g.optNonBlank("relayProbeBase")?.trimEnd('/'),
-        comingSoonNote = g.optNonBlank("comingSoonNote"),
       )
     }
   }.getOrElse { emptyList() }
 }
 
 private fun JSONObject.optNonBlank(name: String): String? = optString(name, "").ifBlank { null }
+
+/** Resolves a string resource by name (e.g. "game_hexstacker_players"); null if absent or blank. */
+private fun Context.optStringByName(name: String): String? {
+  val resId = resources.getIdentifier(name, "string", packageName)
+  return if (resId != 0) getString(resId).ifBlank { null } else null
+}
 
 fun parseHexColor(hex: String): Color = runCatching {
   val c = hex.removePrefix("#")

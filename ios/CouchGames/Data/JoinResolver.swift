@@ -15,7 +15,7 @@ enum JoinResolver {
     static func resolve(_ raw: String?, games: [Game]) -> JoinOutcome {
         let trimmed = (raw ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
-            return .failure(message: "Empty code.")
+            return .failure(message: String(localized: "Empty code."))
         }
 
         // Parse failure, or no scheme / no host → bare code path (sole live game).
@@ -52,7 +52,7 @@ enum JoinResolver {
             return joinAt(base: base, game: game, roomCode: roomCode, claim: claim, instance: instance)
         }
 
-        return .failure(message: "That code isn’t a Couch Games room.")
+        return .failure(message: String(localized: "That code isn’t a Couch Games room."))
     }
 
     // MARK: Internals
@@ -60,20 +60,20 @@ enum JoinResolver {
     private static func soleLiveGameJoin(games: [Game], roomCode: String,
                                          claim: String?, instance: String?) -> JoinOutcome {
         guard let game = games.first(where: { $0.isLive }) else {
-            return .failure(message: "No live game configured.")
+            return .failure(message: String(localized: "No live game configured."))
         }
         guard let base = game.controllerBaseUrl else {
-            return .failure(message: "That game has no controller URL.")
+            return .failure(message: String(localized: "That game has no controller URL."))
         }
         return joinAt(base: base, game: game, roomCode: roomCode, claim: claim, instance: instance)
     }
 
     private static func joinAt(base: String, game: Game, roomCode: String,
                                claim: String?, instance: String?) -> JoinOutcome {
-        // Validate: exact length and every char in the game's charset (case-sensitive).
-        guard roomCode.count == game.roomCodeLength,
-              roomCode.allSatisfy({ game.roomCodeCharset.contains($0) }) else {
-            return .failure(message: "That code isn’t a Couch Games room.")
+        // Validate: exact length and every char in the suite charset (case-sensitive).
+        guard roomCode.count == CG.roomCodeLength,
+              roomCode.allSatisfy({ CG.base58.contains($0) }) else {
+            return .failure(message: String(localized: "That code isn’t a Couch Games room."))
         }
 
         var stripped = base

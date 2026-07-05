@@ -65,7 +65,7 @@ enum RoomDirectory {
 func resolveTypedCode(_ code: String, games: [Game]) async -> JoinOutcome {
     let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
     if trimmed.isEmpty {
-        return .failure(message: "Enter a room code.")
+        return .failure(message: String(localized: "Enter a room code."))
     }
 
     // The SINGLE live game (nil if zero or more than one is live).
@@ -120,7 +120,7 @@ func resolveTypedCode(_ code: String, games: [Game]) async -> JoinOutcome {
     }
     // Rule 3: any Found, no sole live game.
     if anyFound {
-        return .failure(message: "This code can’t be matched to a game right now.")
+        return .failure(message: String(localized: "This code can’t be matched to a game right now."))
     }
 
     // Rule 4: no Found; sole live game + at least one Error → optimistic bare-code resolve.
@@ -131,9 +131,9 @@ func resolveTypedCode(_ code: String, games: [Game]) async -> JoinOutcome {
 
     // Rule 5: at least one NotFound.
     if results.contains(.notFound) {
-        return .failure(message: "Room not found or expired.")
+        return .failure(message: String(localized: "Room not found or expired."))
     }
 
     // Rule 6: everything errored, no sole live game.
-    return .failure(message: "Couldn’t reach the server. Try again.")
+    return .failure(message: String(localized: "Couldn’t reach the server. Try again."))
 }

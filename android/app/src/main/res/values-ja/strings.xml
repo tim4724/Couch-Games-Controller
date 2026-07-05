@@ -1,0 +1,62 @@
+<resources>
+    <!-- Japanese. Shared terms (ルーム, 運営者情報, room_not_found/game_full copy)
+         match HexStacker-Party's i18n. -->
+    <string name="home_subtitle">コントローラー</string>
+    <string name="about">このアプリについて</string>
+    <string name="rejoin_game">%1$sに再参加</string>
+    <string name="room_code_label">ルーム %1$s</string>
+    <string name="status_live">プレイ可能</string>
+    <string name="status_coming_soon">近日公開</string>
+
+    <string name="join_title">プレイ</string>
+    <string name="join_open_host">テレビまたはパソコンで %1$s を開いてください。</string>
+    <string name="scan_code">コードをスキャン</string>
+    <string name="enter_code_manually">コードを手動で入力</string>
+
+    <string name="enter_room_code">ルームコードを入力</string>
+    <string name="code_placeholder">例: A3KX9p</string>
+    <string name="joining">参加中…</string>
+    <string name="join">プレイ</string>
+    <string name="cancel">キャンセル</string>
+
+    <string name="enter_your_name">名前を入力</string>
+    <string name="name">名前</string>
+    <string name="save_and_continue">保存して続ける</string>
+    <string name="save">保存</string>
+    <string name="set_name">名前を設定</string>
+
+    <string name="close_scanner">スキャナーを閉じる</string>
+    <string name="flashlight_on">ライトをオンにする</string>
+    <string name="flashlight_off">ライトをオフにする</string>
+    <string name="scan_hint">テレビまたはパソコンのQRコードをスキャンしてください</string>
+    <string name="camera_access_needed">カメラへのアクセスが必要です</string>
+    <string name="camera_access_rationale">テレビのコードをスキャンするにはカメラへのアクセスを許可してください。または、ルームコードを直接入力することもできます。</string>
+    <string name="allow_camera_access">カメラへのアクセスを許可</string>
+
+    <string name="joining_game">%1$sに参加中…</string>
+    <string name="leave_game">ゲームを退出</string>
+
+    <string name="back">戻る</string>
+    <string name="privacy_policy">プライバシーポリシー</string>
+    <string name="imprint">運営者情報</string>
+    <string name="open_source_licenses">オープンソースライセンス</string>
+
+    <string name="game_end_room_not_found">ルームが見つからない</string>
+    <string name="game_end_room_full">ルームが満員</string>
+    <string name="game_end_replaced">別のデバイスから参加しました</string>
+    <string name="game_end_generic">パーティーが終了しました</string>
+
+    <string name="error_empty_code">コードが空です。</string>
+    <string name="error_not_couch_games_room">このコードはCouch Gamesのルームではありません。</string>
+    <string name="error_no_live_game">利用可能なゲームが設定されていません。</string>
+    <string name="error_no_controller_url">このゲームにはコントローラーのURLがありません。</string>
+    <string name="error_enter_room_code">ルームコードを入力してください。</string>
+    <string name="error_code_unmatched">現在このコードをゲームに関連付けられません。</string>
+    <string name="error_room_not_found_or_expired">ルームが見つからないか期限切れです。</string>
+    <string name="error_server_unreachable">サーバーに接続できませんでした。もう一度お試しください。</string>
+    <!-- Game catalog copy (keyed by manifest game id) -->
+    <string name="game_hexstacker_players">1〜8人</string>
+    <string name="game_tinytrack_players">1〜4人</string>
+    <string name="game_powder_players">1〜4人</string>
+    <string name="play_step_scan">表示されたルームコードをスキャンしてプレイ。</string>
+</resources>

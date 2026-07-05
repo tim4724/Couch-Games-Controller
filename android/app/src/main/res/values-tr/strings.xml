@@ -1,0 +1,62 @@
+<resources>
+    <!-- Turkish. Shared terms (Oda, Künye, room_not_found/game_full copy)
+         match HexStacker-Party's i18n; informal register (sen) like the rest of the suite. -->
+    <string name="home_subtitle">Kumanda</string>
+    <string name="about">Hakkında</string>
+    <string name="rejoin_game">%1$s oyununa yeniden katıl</string>
+    <string name="room_code_label">Oda %1$s</string>
+    <string name="status_live">Yayında</string>
+    <string name="status_coming_soon">Çok yakında</string>
+
+    <string name="join_title">Oyna</string>
+    <string name="join_open_host">TV\'nde veya bilgisayarında %1$s adresini aç.</string>
+    <string name="scan_code">Kodu tara</string>
+    <string name="enter_code_manually">Kodu elle gir</string>
+
+    <string name="enter_room_code">Oda kodunu gir</string>
+    <string name="code_placeholder">örn. A3KX9p</string>
+    <string name="joining">Katılınıyor…</string>
+    <string name="join">Oyna</string>
+    <string name="cancel">İptal</string>
+
+    <string name="enter_your_name">İsmini gir</string>
+    <string name="name">Ad</string>
+    <string name="save_and_continue">Kaydet ve devam et</string>
+    <string name="save">Kaydet</string>
+    <string name="set_name">İsim belirle</string>
+
+    <string name="close_scanner">Tarayıcıyı kapat</string>
+    <string name="flashlight_on">El fenerini aç</string>
+    <string name="flashlight_off">El fenerini kapat</string>
+    <string name="scan_hint">TV\'ndeki veya bilgisayarındaki QR kodu tara</string>
+    <string name="camera_access_needed">Kamera erişimi gerekli</string>
+    <string name="camera_access_rationale">TV\'deki kodu taramak için kamera erişimine izin ver — ya da oda kodunu elle gir.</string>
+    <string name="allow_camera_access">Kamera erişimine izin ver</string>
+
+    <string name="joining_game">%1$s oyununa katılınıyor…</string>
+    <string name="leave_game">Oyundan ayrıl</string>
+
+    <string name="back">Geri</string>
+    <string name="privacy_policy">Gizlilik Politikası</string>
+    <string name="imprint">Künye</string>
+    <string name="open_source_licenses">Açık kaynak lisansları</string>
+
+    <string name="game_end_room_not_found">Oda bulunamadı</string>
+    <string name="game_end_room_full">Oda dolu</string>
+    <string name="game_end_replaced">Başka bir cihazdan katıldın</string>
+    <string name="game_end_generic">Parti sona erdi</string>
+
+    <string name="error_empty_code">Kod boş.</string>
+    <string name="error_not_couch_games_room">Bu kod bir Couch Games odasına ait değil.</string>
+    <string name="error_no_live_game">Yapılandırılmış etkin oyun yok.</string>
+    <string name="error_no_controller_url">Bu oyunun kumanda URL\'si yok.</string>
+    <string name="error_enter_room_code">Bir oda kodu gir.</string>
+    <string name="error_code_unmatched">Bu kod şu anda bir oyunla eşleştirilemiyor.</string>
+    <string name="error_room_not_found_or_expired">Oda bulunamadı veya süresi doldu.</string>
+    <string name="error_server_unreachable">Sunucuya ulaşılamadı. Tekrar dene.</string>
+    <!-- Game catalog copy (keyed by manifest game id) -->
+    <string name="game_hexstacker_players">1–8 oyuncu</string>
+    <string name="game_tinytrack_players">1–4 oyuncu</string>
+    <string name="game_powder_players">1–4 oyuncu</string>
+    <string name="play_step_scan">Görünen oda kodunu tarayarak oyna.</string>
+</resources>

@@ -11,6 +11,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
@@ -28,6 +30,7 @@ fun MainNavigation(deepLink: String? = null, onDeepLinkConsumed: () -> Unit = {}
   val backStack = rememberNavBackStack(Main)
   val scope = rememberCoroutineScope()
   val snackbarHostState = remember { SnackbarHostState() }
+  val context = LocalContext.current
 
   // An external App Link routes through MainScreen (which owns the name gate + join).
   // Pop back to Main first so it's the active entry and can handle it.
@@ -52,8 +55,8 @@ fun MainNavigation(deepLink: String? = null, onDeepLinkConsumed: () -> Unit = {}
         }
         entry<About> {
           AboutScreen(
-            onOpenPrivacy = { backStack.add(WebDoc(LegalLinks.PRIVACY_URL, "Privacy Policy")) },
-            onOpenImprint = { backStack.add(WebDoc(LegalLinks.IMPRINT_URL, "Impressum")) },
+            onOpenPrivacy = { backStack.add(WebDoc(LegalLinks.PRIVACY_URL, R.string.privacy_policy)) },
+            onOpenImprint = { backStack.add(WebDoc(LegalLinks.IMPRINT_URL, R.string.imprint)) },
             onOpenLicenses = { backStack.add(Licenses) },
             onBack = { backStack.removeLastOrNull() },
           )
@@ -64,7 +67,7 @@ fun MainNavigation(deepLink: String? = null, onDeepLinkConsumed: () -> Unit = {}
         entry<WebDoc> { key ->
           WebDocScreen(
             url = key.url,
-            title = key.title,
+            title = stringResource(key.titleRes),
             onBack = { backStack.removeLastOrNull() },
           )
         }
@@ -78,7 +81,7 @@ fun MainNavigation(deepLink: String? = null, onDeepLinkConsumed: () -> Unit = {}
             // the player didn't choose to leave, so silence would read as a crash.
             onGameEnd = { reason ->
               backStack.removeLastOrNull()
-              scope.launch { snackbarHostState.showSnackbar(gameEndMessage(reason)) }
+              scope.launch { snackbarHostState.showSnackbar(context.getString(gameEndMessage(reason))) }
             },
           )
         }
@@ -96,9 +99,9 @@ fun MainNavigation(deepLink: String? = null, onDeepLinkConsumed: () -> Unit = {}
 
 // Player-facing copy for the contract's session-end reasons. The string comes from
 // web content (untrusted), so anything unrecognized falls back to the generic line.
-private fun gameEndMessage(reason: String?): String = when (reason) {
-  "room_not_found" -> "Room not found"
-  "game_full" -> "Room is full"
-  "replaced" -> "You joined from another device"
-  else -> "The party ended"
+private fun gameEndMessage(reason: String?): Int = when (reason) {
+  "room_not_found" -> R.string.game_end_room_not_found
+  "game_full" -> R.string.game_end_room_full
+  "replaced" -> R.string.game_end_replaced
+  else -> R.string.game_end_generic
 }

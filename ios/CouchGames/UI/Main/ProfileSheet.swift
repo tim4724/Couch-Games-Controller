@@ -5,14 +5,15 @@ import UIKit
 
 struct ProfileSheet: View {
     let initial: Profile
-    var title: String = "Your player"
-    var cta: String = "Save"
+    var title: String = String(localized: "Name")
+    var cta: String = String(localized: "Save")
     let onSave: (Profile) -> Void
 
     @State private var name: String
     @Environment(\.cgPalette) private var palette
 
-    init(initial: Profile, title: String = "Your player", cta: String = "Save",
+    init(initial: Profile, title: String = String(localized: "Name"),
+         cta: String = String(localized: "Save"),
          onSave: @escaping (Profile) -> Void) {
         self.initial = initial
         self.title = title
@@ -31,7 +32,7 @@ struct ProfileSheet: View {
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(palette.onSurface)
 
-            TextField("Your name", text: $name)
+            TextField("", text: $name)
                 .textInputAutocapitalization(.words)
                 .font(.cgBodyLarge)
                 .foregroundStyle(palette.onSurface)

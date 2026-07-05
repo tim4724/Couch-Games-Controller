@@ -144,8 +144,8 @@ struct RootView: View {
                         .toolbar(.hidden, for: .navigationBar)
                     case .about:
                         AboutScreen(
-                            onOpenPrivacy: { router.push(.webDoc(WebDocParams(url: CG.privacyURL, title: "Privacy Policy"))) },
-                            onOpenImprint: { router.push(.webDoc(WebDocParams(url: CG.imprintURL, title: "Impressum"))) }
+                            onOpenPrivacy: { router.push(.webDoc(WebDocParams(url: CG.privacyURL, title: String(localized: "Privacy Policy")))) },
+                            onOpenImprint: { router.push(.webDoc(WebDocParams(url: CG.imprintURL, title: String(localized: "Impressum")))) }
                         )
                     case .webDoc(let params):
                         WebDocScreen(url: params.url, title: params.title)

@@ -1,3 +1,72 @@
 <resources>
-    <string name="app_name">Couch Games</string>
+    <string name="app_name" translatable="false">Couch Games</string>
+
+    <!-- Home -->
+    <string name="home_subtitle">Controller</string>
+    <string name="about">About</string>
+    <string name="rejoin_game">Rejoin %1$s</string>
+    <string name="room_code_label">Room %1$s</string>
+    <string name="status_live">Live</string>
+    <string name="status_coming_soon">Coming soon</string>
+
+    <!-- Join card -->
+    <string name="join_title">Play</string>
+    <!-- %1$s is the game host, rendered bold in-app. -->
+    <string name="join_open_host">Open %1$s on your TV or laptop.</string>
+    <string name="scan_code">Scan code</string>
+    <string name="enter_code_manually">Enter code manually</string>
+
+    <!-- Code entry dialog -->
+    <string name="enter_room_code">Enter room code</string>
+    <string name="code_placeholder">e.g. A3KX9p</string>
+    <string name="joining">Joining…</string>
+    <string name="join">Play</string>
+    <string name="cancel">Cancel</string>
+
+    <!-- Profile -->
+    <string name="enter_your_name">Enter your name</string>
+    <string name="name">Name</string>
+    <string name="save_and_continue">Save &amp; continue</string>
+    <string name="save">Save</string>
+    <string name="set_name">Set name</string>
+
+    <!-- Scanner -->
+    <string name="close_scanner">Close scanner</string>
+    <string name="flashlight_on">Turn flashlight on</string>
+    <string name="flashlight_off">Turn flashlight off</string>
+    <string name="scan_hint">Scan the QR code on your TV or laptop</string>
+    <string name="camera_access_needed">Camera access needed</string>
+    <string name="camera_access_rationale">Allow camera access to scan the code on your TV — or type the room code instead.</string>
+    <string name="allow_camera_access">Allow camera access</string>
+
+    <!-- Game host -->
+    <string name="joining_game">Joining %1$s…</string>
+    <string name="leave_game">Leave game</string>
+
+    <!-- About / legal -->
+    <string name="back">Back</string>
+    <string name="privacy_policy">Privacy Policy</string>
+    <string name="imprint">Impressum</string>
+    <string name="open_source_licenses">Open source licenses</string>
+
+    <!-- Game-reported session end (Navigation.gameEndMessage) -->
+    <string name="game_end_room_not_found">Room not found</string>
+    <string name="game_end_room_full">Room is full</string>
+    <string name="game_end_replaced">You joined from another device</string>
+    <string name="game_end_generic">The party ended</string>
+
+    <!-- Join / code resolution errors -->
+    <string name="error_empty_code">Empty code.</string>
+    <string name="error_not_couch_games_room">That code isn\'t a Couch Games room.</string>
+    <string name="error_no_live_game">No live game configured.</string>
+    <string name="error_no_controller_url">That game has no controller URL.</string>
+    <string name="error_enter_room_code">Enter a room code.</string>
+    <string name="error_code_unmatched">This code can\'t be matched to a game right now.</string>
+    <string name="error_room_not_found_or_expired">Room not found or expired.</string>
+    <string name="error_server_unreachable">Couldn\'t reach the server. Try again.</string>
+    <!-- Game catalog copy (keyed by manifest game id) -->
+    <string name="game_hexstacker_players">1–8 players</string>
+    <string name="game_tinytrack_players">1–4 players</string>
+    <string name="game_powder_players">1–4 players</string>
+    <string name="play_step_scan">Scan the room code it shows to play.</string>
 </resources>

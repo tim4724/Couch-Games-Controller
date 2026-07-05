@@ -16,8 +16,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import com.couchgames.controller.R
 import com.couchgames.controller.data.Profile
 import com.couchgames.controller.ui.components.AppSheet
 
@@ -31,8 +33,8 @@ fun ProfileSheet(
   initial: Profile,
   onDismiss: () -> Unit,
   onSave: (Profile) -> Unit,
-  title: String = "Your player",
-  cta: String = "Save",
+  title: String = stringResource(R.string.name),
+  cta: String = stringResource(R.string.save),
 ) {
   var name by remember { mutableStateOf(initial.name) }
 
@@ -47,7 +49,6 @@ fun ProfileSheet(
       OutlinedTextField(
         value = name,
         onValueChange = { if (it.length <= 16) name = it },
-        label = { Text("Your name") },
         singleLine = true,
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
         modifier = Modifier.fillMaxWidth(),

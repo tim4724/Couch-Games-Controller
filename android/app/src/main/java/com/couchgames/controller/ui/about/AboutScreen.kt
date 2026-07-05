@@ -15,7 +15,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.couchgames.controller.R
 import com.couchgames.controller.ui.components.BackScaffold
 
 /**
@@ -31,13 +33,13 @@ fun AboutScreen(
   onOpenLicenses: () -> Unit,
   onBack: () -> Unit,
 ) {
-  BackScaffold(title = "About", onBack = onBack) { innerPadding ->
+  BackScaffold(title = stringResource(R.string.about), onBack = onBack) { innerPadding ->
     Column(Modifier.fillMaxSize().padding(innerPadding)) {
-      AboutRow("Privacy Policy", onOpenPrivacy)
+      AboutRow(stringResource(R.string.privacy_policy), onOpenPrivacy)
       HorizontalDivider()
-      AboutRow("Impressum", onOpenImprint)
+      AboutRow(stringResource(R.string.imprint), onOpenImprint)
       HorizontalDivider()
-      AboutRow("Open source licenses", onOpenLicenses)
+      AboutRow(stringResource(R.string.open_source_licenses), onOpenLicenses)
     }
   }
 }

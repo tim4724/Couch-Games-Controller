@@ -84,10 +84,10 @@ struct QRScannerScreen: View {
                 if granted {
                     authorized = true
                 } else {
-                    finish(.failure(message: "Camera permission denied"))
+                    finish(.failure(message: String(localized: "Camera permission denied")))
                 }
             default:
-                finish(.failure(message: "Camera permission denied"))
+                finish(.failure(message: String(localized: "Camera permission denied")))
             }
         }
     }
@@ -136,25 +136,25 @@ private struct CameraPreview: UIViewRepresentable {
                 guard let self else { return }
                 do {
                     guard let device = AVCaptureDevice.default(for: .video) else {
-                        throw SetupError(message: "No camera available")
+                        throw SetupError(message: String(localized: "No camera available"))
                     }
                     let input = try AVCaptureDeviceInput(device: device)
                     self.session.beginConfiguration()
                     guard self.session.canAddInput(input) else {
                         self.session.commitConfiguration()
-                        throw SetupError(message: "Unable to use the camera")
+                        throw SetupError(message: String(localized: "Unable to use the camera"))
                     }
                     self.session.addInput(input)
                     let output = AVCaptureMetadataOutput()
                     guard self.session.canAddOutput(output) else {
                         self.session.commitConfiguration()
-                        throw SetupError(message: "Unable to scan with this camera")
+                        throw SetupError(message: String(localized: "Unable to scan with this camera"))
                     }
                     self.session.addOutput(output)
                     output.setMetadataObjectsDelegate(self, queue: .main)
                     guard output.availableMetadataObjectTypes.contains(.qr) else {
                         self.session.commitConfiguration()
-                        throw SetupError(message: "QR scanning is not supported on this device")
+                        throw SetupError(message: String(localized: "QR scanning is not supported on this device"))
                     }
                     output.metadataObjectTypes = [.qr]
                     self.session.commitConfiguration()

@@ -12,6 +12,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.couchgames.controller.R
 
 /**
  * A [Scaffold] with a titled back-arrow [TopAppBar] — the shared shell for the
@@ -33,7 +35,7 @@ fun BackScaffold(
         title = { Text(title) },
         navigationIcon = {
           IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
           }
         },
       )

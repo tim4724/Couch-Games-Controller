@@ -1,0 +1,62 @@
+<resources>
+    <!-- Italian. Shared terms (Stanza, Note legali, room_not_found/game_full copy)
+         match HexStacker-Party's i18n; informal register (tu) like the rest of the suite. -->
+    <string name="home_subtitle">Controller</string>
+    <string name="about">Informazioni</string>
+    <string name="rejoin_game">Rientra in %1$s</string>
+    <string name="room_code_label">Stanza %1$s</string>
+    <string name="status_live">Disponibile</string>
+    <string name="status_coming_soon">In arrivo</string>
+
+    <string name="join_title">Gioca</string>
+    <string name="join_open_host">Apri %1$s sulla tua TV o sul laptop.</string>
+    <string name="scan_code">Scansiona il codice</string>
+    <string name="enter_code_manually">Inserisci il codice manualmente</string>
+
+    <string name="enter_room_code">Inserisci il codice della stanza</string>
+    <string name="code_placeholder">es. A3KX9p</string>
+    <string name="joining">Accesso…</string>
+    <string name="join">Gioca</string>
+    <string name="cancel">Annulla</string>
+
+    <string name="enter_your_name">Scrivi il tuo nome</string>
+    <string name="name">Nome</string>
+    <string name="save_and_continue">Salva e continua</string>
+    <string name="save">Salva</string>
+    <string name="set_name">Imposta nome</string>
+
+    <string name="close_scanner">Chiudi lo scanner</string>
+    <string name="flashlight_on">Accendi la torcia</string>
+    <string name="flashlight_off">Spegni la torcia</string>
+    <string name="scan_hint">Scansiona il codice QR sulla tua TV o sul laptop</string>
+    <string name="camera_access_needed">Serve l’accesso alla fotocamera</string>
+    <string name="camera_access_rationale">Consenti l’accesso alla fotocamera per scansionare il codice sulla TV, oppure inserisci il codice della stanza.</string>
+    <string name="allow_camera_access">Consenti accesso alla fotocamera</string>
+
+    <string name="joining_game">Accesso a %1$s…</string>
+    <string name="leave_game">Esci dal gioco</string>
+
+    <string name="back">Indietro</string>
+    <string name="privacy_policy">Informativa sulla privacy</string>
+    <string name="imprint">Note legali</string>
+    <string name="open_source_licenses">Licenze open source</string>
+
+    <string name="game_end_room_not_found">Stanza non trovata</string>
+    <string name="game_end_room_full">Stanza piena</string>
+    <string name="game_end_replaced">Sei entrato da un altro dispositivo</string>
+    <string name="game_end_generic">La festa è finita</string>
+
+    <string name="error_empty_code">Codice vuoto.</string>
+    <string name="error_not_couch_games_room">Questo codice non corrisponde a una stanza di Couch Games.</string>
+    <string name="error_no_live_game">Nessun gioco attivo configurato.</string>
+    <string name="error_no_controller_url">Questo gioco non ha un URL del controller.</string>
+    <string name="error_enter_room_code">Inserisci un codice stanza.</string>
+    <string name="error_code_unmatched">Al momento questo codice non può essere associato a un gioco.</string>
+    <string name="error_room_not_found_or_expired">Stanza non trovata o scaduta.</string>
+    <string name="error_server_unreachable">Impossibile raggiungere il server. Riprova.</string>
+    <!-- Game catalog copy (keyed by manifest game id) -->
+    <string name="game_hexstacker_players">1–8 giocatori</string>
+    <string name="game_tinytrack_players">1–4 giocatori</string>
+    <string name="game_powder_players">1–4 giocatori</string>
+    <string name="play_step_scan">Scansiona il codice della stanza mostrato per giocare.</string>
+</resources>

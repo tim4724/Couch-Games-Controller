@@ -69,6 +69,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -166,7 +167,7 @@ fun ScanScreen(
           return
         }
         is JoinOutcome.Failure ->
-          if (newFailure == null && rejected.add(raw)) newFailure = r.message
+          if (newFailure == null && rejected.add(raw)) newFailure = context.getString(r.messageRes)
       }
     }
     scanError = newFailure ?: return
@@ -230,14 +231,14 @@ fun ScanScreen(
         verticalAlignment = Alignment.CenterVertically,
       ) {
         ScannerIconButton(onClick = onClose) {
-          Icon(Icons.Filled.Close, contentDescription = "Close scanner", tint = Color.White)
+          Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.close_scanner), tint = Color.White)
         }
         Spacer(Modifier.weight(1f))
         if (hasTorch) {
           ScannerIconButton(onClick = { torchOn = !torchOn }) {
             Icon(
               painterResource(if (torchOn) R.drawable.ic_flash_on else R.drawable.ic_flash_off),
-              contentDescription = if (torchOn) "Turn flashlight off" else "Turn flashlight on",
+              contentDescription = stringResource(if (torchOn) R.string.flashlight_off else R.string.flashlight_on),
               tint = Color.White,
             )
           }
@@ -251,7 +252,7 @@ fun ScanScreen(
       ) {
         if (granted) {
           Text(
-            "Scan the QR code on your TV or laptop",
+            stringResource(R.string.scan_hint),
             style = MaterialTheme.typography.bodyLarge,
             color = Color.White,
             textAlign = TextAlign.Center,
@@ -276,7 +277,7 @@ fun ScanScreen(
         }
         if (granted) {
           FilledTonalButton(onClick = onEnterCode, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-            Text("Enter code manually", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.enter_code_manually), style = MaterialTheme.typography.titleMedium)
           }
         }
       }
@@ -384,24 +385,24 @@ private fun PermissionDeniedContent(onRetry: () -> Unit, onEnterCode: () -> Unit
     )
     Spacer(Modifier.height(16.dp))
     Text(
-      "Camera access needed",
+      stringResource(R.string.camera_access_needed),
       style = MaterialTheme.typography.titleLarge,
       color = Color.White,
     )
     Spacer(Modifier.height(8.dp))
     Text(
-      "Allow camera access to scan the code on your TV — or type the room code instead.",
+      stringResource(R.string.camera_access_rationale),
       style = MaterialTheme.typography.bodyLarge,
       color = Color.White.copy(alpha = 0.75f),
       textAlign = TextAlign.Center,
     )
     Spacer(Modifier.height(24.dp))
     Button(onClick = onRetry, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-      Text("Allow camera access", style = MaterialTheme.typography.titleMedium)
+      Text(stringResource(R.string.allow_camera_access), style = MaterialTheme.typography.titleMedium)
     }
     Spacer(Modifier.height(10.dp))
     FilledTonalButton(onClick = onEnterCode, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-      Text("Enter code manually", style = MaterialTheme.typography.titleMedium)
+      Text(stringResource(R.string.enter_code_manually), style = MaterialTheme.typography.titleMedium)
     }
   }
 }

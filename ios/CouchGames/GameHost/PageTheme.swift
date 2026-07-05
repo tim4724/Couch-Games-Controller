@@ -59,10 +59,10 @@ func parseCssRgb(_ value: String?) -> Color? {
 /// Unknown values must be tolerated, never crash/ignore.
 func gameEndMessage(_ reason: String?) -> String {
     switch reason {
-    case "room_not_found": return "Room not found"
-    case "game_full": return "Room is full"
-    case "replaced": return "You joined from another device"
-    default: return "The party ended"
+    case "room_not_found": return String(localized: "Room not found")
+    case "game_full": return String(localized: "Room is full")
+    case "replaced": return String(localized: "You joined from another device")
+    default: return String(localized: "The party ended")
     }
 }
 

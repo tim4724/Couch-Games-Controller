@@ -27,7 +27,7 @@ struct AboutScreen: View {
 }
 
 private struct AboutRow: View {
-    let label: String
+    let label: LocalizedStringKey
     let action: () -> Void
 
     @Environment(\.cgPalette) private var palette

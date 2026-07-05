@@ -1,0 +1,62 @@
+<resources>
+    <!-- Simplified Chinese. Shared terms (房间, 法律声明, room_not_found/game_full copy)
+         match HexStacker-Party's i18n. -->
+    <string name="home_subtitle">控制器</string>
+    <string name="about">关于</string>
+    <string name="rejoin_game">重新加入%1$s</string>
+    <string name="room_code_label">房间 %1$s</string>
+    <string name="status_live">已上线</string>
+    <string name="status_coming_soon">即将推出</string>
+
+    <string name="join_title">开始游戏</string>
+    <string name="join_open_host">在电视或电脑上打开 %1$s。</string>
+    <string name="scan_code">扫描二维码</string>
+    <string name="enter_code_manually">手动输入代码</string>
+
+    <string name="enter_room_code">输入房间代码</string>
+    <string name="code_placeholder">例如 A3KX9p</string>
+    <string name="joining">加入中…</string>
+    <string name="join">开始游戏</string>
+    <string name="cancel">取消</string>
+
+    <string name="enter_your_name">输入名字</string>
+    <string name="name">名字</string>
+    <string name="save_and_continue">保存并继续</string>
+    <string name="save">保存</string>
+    <string name="set_name">设置名字</string>
+
+    <string name="close_scanner">关闭扫描器</string>
+    <string name="flashlight_on">打开手电筒</string>
+    <string name="flashlight_off">关闭手电筒</string>
+    <string name="scan_hint">扫描电视或电脑上的二维码</string>
+    <string name="camera_access_needed">需要相机权限</string>
+    <string name="camera_access_rationale">允许使用相机来扫描电视上的二维码，或者直接输入房间代码。</string>
+    <string name="allow_camera_access">允许使用相机</string>
+
+    <string name="joining_game">正在加入%1$s…</string>
+    <string name="leave_game">退出游戏</string>
+
+    <string name="back">返回</string>
+    <string name="privacy_policy">隐私政策</string>
+    <string name="imprint">法律声明</string>
+    <string name="open_source_licenses">开源许可证</string>
+
+    <string name="game_end_room_not_found">房间未找到</string>
+    <string name="game_end_room_full">房间已满</string>
+    <string name="game_end_replaced">你已从其他设备加入</string>
+    <string name="game_end_generic">派对结束了</string>
+
+    <string name="error_empty_code">代码为空。</string>
+    <string name="error_not_couch_games_room">该代码不是 Couch Games 房间。</string>
+    <string name="error_no_live_game">未配置可用的游戏。</string>
+    <string name="error_no_controller_url">该游戏没有控制器网址。</string>
+    <string name="error_enter_room_code">请输入房间代码。</string>
+    <string name="error_code_unmatched">目前无法将此代码匹配到游戏。</string>
+    <string name="error_room_not_found_or_expired">房间未找到或已过期。</string>
+    <string name="error_server_unreachable">无法连接服务器，请重试。</string>
+    <!-- Game catalog copy (keyed by manifest game id) -->
+    <string name="game_hexstacker_players">1–8 人</string>
+    <string name="game_tinytrack_players">1–4 人</string>
+    <string name="game_powder_players">1–4 人</string>
+    <string name="play_step_scan">扫描显示的房间码即可开始游戏。</string>
+</resources>

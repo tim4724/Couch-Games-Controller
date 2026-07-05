@@ -1,6 +1,7 @@
 package com.couchgames.controller.data
 
 import android.net.Uri
+import com.couchgames.controller.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -76,7 +77,7 @@ object RoomDirectory {
  */
 suspend fun resolveTypedCode(code: String, games: List<Game>): JoinOutcome = coroutineScope {
   val trimmed = code.trim()
-  if (trimmed.isEmpty()) return@coroutineScope JoinOutcome.Failure("Enter a room code.")
+  if (trimmed.isEmpty()) return@coroutineScope JoinOutcome.Failure(R.string.error_enter_room_code)
   val sole = games.singleOrNull { it.isLive }
 
   // Race the game's own relay (first, so it wins ties) and the shared directory.
@@ -98,11 +99,11 @@ suspend fun resolveTypedCode(code: String, games: List<Game>): JoinOutcome = cor
     foundOrigin != null -> JoinResolver.resolve("${foundOrigin.trimEnd('/')}/$trimmed", games)
     // Room exists but the relay stored neither URL nor origin: the sole live game hosts it.
     founds.isNotEmpty() && sole != null -> JoinResolver.resolve(trimmed, games)
-    founds.isNotEmpty() -> JoinOutcome.Failure("This code can't be matched to a game right now.")
+    founds.isNotEmpty() -> JoinOutcome.Failure(R.string.error_code_unmatched)
     // No relay had the room. If any errored we couldn't truly verify — with a sole
     // live game, resolve optimistically and let its own page decide.
     sole != null && results.any { it is RoomLookup.Error } -> JoinResolver.resolve(trimmed, games)
-    results.any { it is RoomLookup.NotFound } -> JoinOutcome.Failure("Room not found or expired.")
-    else -> JoinOutcome.Failure("Couldn't reach the server. Try again.")
+    results.any { it is RoomLookup.NotFound } -> JoinOutcome.Failure(R.string.error_room_not_found_or_expired)
+    else -> JoinOutcome.Failure(R.string.error_server_unreachable)
   }
 }

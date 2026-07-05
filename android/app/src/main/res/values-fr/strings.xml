@@ -1,0 +1,62 @@
+<resources>
+    <!-- French. Shared terms (Salle, Mentions légales, room_not_found/game_full copy)
+         match HexStacker-Party's i18n; informal register (tu) like the rest of the suite. -->
+    <string name="home_subtitle">Manette</string>
+    <string name="about">À propos</string>
+    <string name="rejoin_game">Rejoindre %1$s</string>
+    <string name="room_code_label">Salle %1$s</string>
+    <string name="status_live">Disponible</string>
+    <string name="status_coming_soon">Bientôt disponible</string>
+
+    <string name="join_title">Jouer</string>
+    <string name="join_open_host">Ouvre %1$s sur ta TV ou ton ordinateur.</string>
+    <string name="scan_code">Scanner le code</string>
+    <string name="enter_code_manually">Saisir le code manuellement</string>
+
+    <string name="enter_room_code">Saisir le code de la salle</string>
+    <string name="code_placeholder">ex. A3KX9p</string>
+    <string name="joining">Connexion…</string>
+    <string name="join">Jouer</string>
+    <string name="cancel">Annuler</string>
+
+    <string name="enter_your_name">Entre ton nom</string>
+    <string name="name">Nom</string>
+    <string name="save_and_continue">Enregistrer et continuer</string>
+    <string name="save">Enregistrer</string>
+    <string name="set_name">Choisir un nom</string>
+
+    <string name="close_scanner">Fermer le scanner</string>
+    <string name="flashlight_on">Activer la lampe torche</string>
+    <string name="flashlight_off">Désactiver la lampe torche</string>
+    <string name="scan_hint">Scanne le QR code sur ta TV ou ton ordinateur</string>
+    <string name="camera_access_needed">Accès à la caméra requis</string>
+    <string name="camera_access_rationale">Autorise l’accès à la caméra pour scanner le code sur ta TV — ou saisis le code de la salle à la place.</string>
+    <string name="allow_camera_access">Autoriser la caméra</string>
+
+    <string name="joining_game">Connexion à %1$s…</string>
+    <string name="leave_game">Quitter la partie</string>
+
+    <string name="back">Retour</string>
+    <string name="privacy_policy">Politique de confidentialité</string>
+    <string name="imprint">Mentions légales</string>
+    <string name="open_source_licenses">Licences open source</string>
+
+    <string name="game_end_room_not_found">Salle introuvable</string>
+    <string name="game_end_room_full">Salle pleine</string>
+    <string name="game_end_replaced">Tu as rejoint depuis un autre appareil</string>
+    <string name="game_end_generic">La partie est terminée</string>
+
+    <string name="error_empty_code">Code vide.</string>
+    <string name="error_not_couch_games_room">Ce code ne correspond pas à une salle Couch Games.</string>
+    <string name="error_no_live_game">Aucun jeu actif configuré.</string>
+    <string name="error_no_controller_url">Ce jeu n’a pas d’URL de manette.</string>
+    <string name="error_enter_room_code">Saisis un code de salle.</string>
+    <string name="error_code_unmatched">Ce code ne peut pas être associé à un jeu pour le moment.</string>
+    <string name="error_room_not_found_or_expired">Salle introuvable ou expirée.</string>
+    <string name="error_server_unreachable">Impossible de joindre le serveur. Réessaie.</string>
+    <!-- Game catalog copy (keyed by manifest game id) -->
+    <string name="game_hexstacker_players">1–8 joueurs</string>
+    <string name="game_tinytrack_players">1–4 joueurs</string>
+    <string name="game_powder_players">1–4 joueurs</string>
+    <string name="play_step_scan">Scanne le code de salle affiché pour jouer.</string>
+</resources>

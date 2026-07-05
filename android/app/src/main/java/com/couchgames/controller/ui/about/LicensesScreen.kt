@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import com.couchgames.controller.R
 import com.couchgames.controller.ui.components.BackScaffold
 import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
@@ -27,7 +28,7 @@ private val NON_OSS_LICENSES = setOf(
  */
 @Composable
 fun LicensesScreen(onBack: () -> Unit) {
-  BackScaffold(title = "Open source licenses", onBack = onBack) { innerPadding ->
+  BackScaffold(title = stringResource(R.string.open_source_licenses), onBack = onBack) { innerPadding ->
     val all by produceLibraries(R.raw.aboutlibraries)
     // Keep only libraries carrying at least one genuine open-source license — drops
     // the Google SDKs whose only license is a proprietary terms-of-service.

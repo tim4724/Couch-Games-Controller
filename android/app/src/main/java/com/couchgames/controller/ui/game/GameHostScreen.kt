@@ -65,6 +65,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -73,6 +74,7 @@ import androidx.core.view.DisplayCutoutCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import com.couchgames.controller.R
 import com.couchgames.controller.data.LAUNCHER_HOST
 import com.couchgames.controller.data.Profile
 import com.couchgames.controller.data.ProfileStore
@@ -346,7 +348,7 @@ private fun GameHostContent(
           ) {
             CircularProgressIndicator()
             Text(
-              "Joining $title…",
+              stringResource(R.string.joining_game, title),
               style = MaterialTheme.typography.bodyMedium,
               color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -435,7 +437,7 @@ private fun LeaveBar(
       title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
       navigationIcon = {
         IconButton(onClick = onLeave) {
-          Icon(Icons.Filled.Close, contentDescription = "Leave game")
+          Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.leave_game))
         }
       },
       actions = {

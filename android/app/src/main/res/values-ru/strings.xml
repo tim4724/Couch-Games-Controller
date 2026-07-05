@@ -1,0 +1,62 @@
+<resources>
+    <!-- Russian. Shared terms (Комната, Выходные данные, room_not_found/game_full copy)
+         match HexStacker-Party's i18n; informal register (ты) like the rest of the suite. -->
+    <string name="home_subtitle">Контроллер</string>
+    <string name="about">О приложении</string>
+    <string name="rejoin_game">Вернуться в %1$s</string>
+    <string name="room_code_label">Комната %1$s</string>
+    <string name="status_live">Доступно</string>
+    <string name="status_coming_soon">Скоро</string>
+
+    <string name="join_title">Играть</string>
+    <string name="join_open_host">Открой %1$s на телевизоре или ноутбуке.</string>
+    <string name="scan_code">Сканировать код</string>
+    <string name="enter_code_manually">Ввести код вручную</string>
+
+    <string name="enter_room_code">Введите код комнаты</string>
+    <string name="code_placeholder">напр. A3KX9p</string>
+    <string name="joining">Подключение…</string>
+    <string name="join">Играть</string>
+    <string name="cancel">Отмена</string>
+
+    <string name="enter_your_name">Введи имя</string>
+    <string name="name">Имя</string>
+    <string name="save_and_continue">Сохранить и продолжить</string>
+    <string name="save">Сохранить</string>
+    <string name="set_name">Указать имя</string>
+
+    <string name="close_scanner">Закрыть сканер</string>
+    <string name="flashlight_on">Включить фонарик</string>
+    <string name="flashlight_off">Выключить фонарик</string>
+    <string name="scan_hint">Отсканируй QR-код на телевизоре или ноутбуке</string>
+    <string name="camera_access_needed">Нужен доступ к камере</string>
+    <string name="camera_access_rationale">Разреши доступ к камере, чтобы отсканировать код на телевизоре, — или введи код комнаты вручную.</string>
+    <string name="allow_camera_access">Разрешить доступ к камере</string>
+
+    <string name="joining_game">Подключение к %1$s…</string>
+    <string name="leave_game">Покинуть игру</string>
+
+    <string name="back">Назад</string>
+    <string name="privacy_policy">Политика конфиденциальности</string>
+    <string name="imprint">Выходные данные</string>
+    <string name="open_source_licenses">Лицензии открытого ПО</string>
+
+    <string name="game_end_room_not_found">Комната не найдена</string>
+    <string name="game_end_room_full">Комната заполнена</string>
+    <string name="game_end_replaced">Ты подключился с другого устройства</string>
+    <string name="game_end_generic">Вечеринка закончилась</string>
+
+    <string name="error_empty_code">Пустой код.</string>
+    <string name="error_not_couch_games_room">Этот код не от комнаты Couch Games.</string>
+    <string name="error_no_live_game">Нет настроенной активной игры.</string>
+    <string name="error_no_controller_url">У этой игры нет URL контроллера.</string>
+    <string name="error_enter_room_code">Введи код комнаты.</string>
+    <string name="error_code_unmatched">Сейчас этот код не удаётся сопоставить с игрой.</string>
+    <string name="error_room_not_found_or_expired">Комната не найдена или устарела.</string>
+    <string name="error_server_unreachable">Не удалось связаться с сервером. Попробуй ещё раз.</string>
+    <!-- Game catalog copy (keyed by manifest game id) -->
+    <string name="game_hexstacker_players">1–8 игроков</string>
+    <string name="game_tinytrack_players">1–4 игрока</string>
+    <string name="game_powder_players">1–4 игрока</string>
+    <string name="play_step_scan">Отсканируй показанный код комнаты, чтобы играть.</string>
+</resources>

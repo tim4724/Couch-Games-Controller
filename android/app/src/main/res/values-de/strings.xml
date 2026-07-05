@@ -1,0 +1,62 @@
+<resources>
+    <!-- German. Shared terms (Raum, Impressum, room_not_found/game_full copy) match
+         HexStacker-Party's i18n; informal register (du) like the rest of the suite. -->
+    <string name="home_subtitle">Controller</string>
+    <string name="about">Info</string>
+    <string name="rejoin_game">%1$s erneut beitreten</string>
+    <string name="room_code_label">Raum %1$s</string>
+    <string name="status_live">Live</string>
+    <string name="status_coming_soon">Bald verfügbar</string>
+
+    <string name="join_title">Spielen</string>
+    <string name="join_open_host">Öffne %1$s auf deinem Fernseher oder Laptop.</string>
+    <string name="scan_code">Code scannen</string>
+    <string name="enter_code_manually">Code manuell eingeben</string>
+
+    <string name="enter_room_code">Raumcode eingeben</string>
+    <string name="code_placeholder">z.&#160;B. A3KX9p</string>
+    <string name="joining">Trete bei…</string>
+    <string name="join">Spielen</string>
+    <string name="cancel">Abbrechen</string>
+
+    <string name="enter_your_name">Gib deinen Namen ein</string>
+    <string name="name">Name</string>
+    <string name="save_and_continue">Speichern &amp; weiter</string>
+    <string name="save">Speichern</string>
+    <string name="set_name">Name festlegen</string>
+
+    <string name="close_scanner">Scanner schließen</string>
+    <string name="flashlight_on">Taschenlampe einschalten</string>
+    <string name="flashlight_off">Taschenlampe ausschalten</string>
+    <string name="scan_hint">Scanne den QR-Code auf deinem Fernseher oder Laptop</string>
+    <string name="camera_access_needed">Kamerazugriff benötigt</string>
+    <string name="camera_access_rationale">Erlaube den Kamerazugriff, um den Code auf deinem Fernseher zu scannen — oder gib stattdessen den Raumcode ein.</string>
+    <string name="allow_camera_access">Kamerazugriff erlauben</string>
+
+    <string name="joining_game">Trete %1$s bei…</string>
+    <string name="leave_game">Spiel verlassen</string>
+
+    <string name="back">Zurück</string>
+    <string name="privacy_policy">Datenschutzerklärung</string>
+    <string name="imprint">Impressum</string>
+    <string name="open_source_licenses">Open-Source-Lizenzen</string>
+
+    <string name="game_end_room_not_found">Raum nicht gefunden</string>
+    <string name="game_end_room_full">Raum ist voll</string>
+    <string name="game_end_replaced">Du bist von einem anderen Gerät beigetreten</string>
+    <string name="game_end_generic">Die Party ist vorbei</string>
+
+    <string name="error_empty_code">Leerer Code.</string>
+    <string name="error_not_couch_games_room">Dieser Code gehört zu keinem Couch-Games-Raum.</string>
+    <string name="error_no_live_game">Kein aktives Spiel konfiguriert.</string>
+    <string name="error_no_controller_url">Dieses Spiel hat keine Controller-URL.</string>
+    <string name="error_enter_room_code">Gib einen Raumcode ein.</string>
+    <string name="error_code_unmatched">Dieser Code kann gerade keinem Spiel zugeordnet werden.</string>
+    <string name="error_room_not_found_or_expired">Raum nicht gefunden oder abgelaufen.</string>
+    <string name="error_server_unreachable">Server nicht erreichbar. Versuch es erneut.</string>
+    <!-- Game catalog copy (keyed by manifest game id) -->
+    <string name="game_hexstacker_players">1–8 Spieler</string>
+    <string name="game_tinytrack_players">1–4 Spieler</string>
+    <string name="game_powder_players">1–4 Spieler</string>
+    <string name="play_step_scan">Scanne den angezeigten Raumcode, um zu spielen.</string>
+</resources>

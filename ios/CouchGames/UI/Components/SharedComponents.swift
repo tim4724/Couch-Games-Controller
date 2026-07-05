@@ -269,9 +269,14 @@ struct PressableCardButtonStyle: ButtonStyle {
 struct AppSheetContainer<Content: View>: View {
     @Environment(\.cgPalette) private var palette
     @State private var measuredHeight: CGFloat = 0
+    /// A game's theme-color, used as the sheet surface so an in-game sheet reads as
+    /// part of the game. Nil (the default) keeps the neutral surface. Callers gate on
+    /// luminance so the surface stays dark enough for the sheet's light text.
+    private let surfaceTint: Color?
     private let content: () -> Content
 
-    init(@ViewBuilder content: @escaping () -> Content) {
+    init(surfaceTint: Color? = nil, @ViewBuilder content: @escaping () -> Content) {
+        self.surfaceTint = surfaceTint
         self.content = content
     }
 
@@ -291,7 +296,7 @@ struct AppSheetContainer<Content: View>: View {
             .presentationDetents([.height(max(measuredHeight, 1))])
             .presentationDragIndicator(.hidden)
             .presentationCornerRadius(28)
-            .presentationBackground(palette.surfaceContainerHigh)
+            .presentationBackground(surfaceTint ?? palette.surfaceContainerHigh)
     }
 }
 
@@ -299,20 +304,22 @@ extension View {
     func appSheet<Content: View>(
         isPresented: Binding<Bool>,
         onDismiss: (() -> Void)? = nil,
+        surfaceTint: Color? = nil,
         @ViewBuilder content: @escaping () -> Content
     ) -> some View {
         sheet(isPresented: isPresented, onDismiss: onDismiss) {
-            AppSheetContainer(content: content)
+            AppSheetContainer(surfaceTint: surfaceTint, content: content)
         }
     }
 
     func appSheet<Item: Identifiable, Content: View>(
         item: Binding<Item?>,
         onDismiss: (() -> Void)? = nil,
+        surfaceTint: Color? = nil,
         @ViewBuilder content: @escaping (Item) -> Content
     ) -> some View {
         sheet(item: item, onDismiss: onDismiss) { item in
-            AppSheetContainer { content(item) }
+            AppSheetContainer(surfaceTint: surfaceTint) { content(item) }
         }
     }
 }

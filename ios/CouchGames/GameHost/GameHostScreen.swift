@@ -64,6 +64,16 @@ struct GameHostScreen: View {
         pageTheme.bar.map { contentColorOn($0) }
     }
 
+    /// The game's own theme-color (the page chrome color) becomes the rename sheet's
+    /// surface, so the sheet reads as part of the game rather than the neutral app
+    /// grey. Adopted only when it's dark enough to keep the sheet's white text legible
+    /// (white ≥ 4.5:1 needs luminance < ~0.18); a lighter theme-color falls back to
+    /// the neutral surface. Most game chrome is very dark, so this usually applies.
+    private var sheetSurface: Color? {
+        guard let bar = pageTheme.bar, relativeLuminance(bar) < 0.18 else { return nil }
+        return bar
+    }
+
     /// Safe-zone geometry (points, ints). Top is the chrome's full extent (inset +
     /// Leave bar). Right reaches the name chip's edge; the gap beyond the cutout is
     /// the chrome's content gutter, mirrored onto the left so the page lines up with
@@ -125,7 +135,7 @@ struct GameHostScreen: View {
         // home indicator dims when idle, edge swipes need a second confirm.
         .persistentSystemOverlays(.hidden)
         .defersSystemGestures(on: .all)
-        .appSheet(item: $renameRequest) { request in
+        .appSheet(item: $renameRequest, surfaceTint: sheetSurface) { request in
             ProfileSheet(initial: request.profile, onSave: { saved in
                 ProfileStore.save(saved)
                 profile = saved
@@ -133,9 +143,14 @@ struct GameHostScreen: View {
                 // Live injection happens via GameWebView.playerName → updateUIView.
             })
         }
-        // Forced dark for the whole subtree AND the rename sheet.
+        // Forced dark for the whole subtree AND the rename sheet. The tint must move
+        // with the palette: cgThemed() sets it once from the SYSTEM scheme, so without
+        // this a system-light device would fill prominent controls over the (dark) game
+        // — e.g. the rename sheet's Save button — with the light palette's near-black
+        // primary under the dark palette's near-black onPrimary label (black-on-black).
         .environment(\.cgPalette, hostPalette)
         .environment(\.colorScheme, .dark)
+        .tint(hostPalette.primary)
         // Status-bar icons contrast against the (possibly game-colored) bar strip.
         // Entering/leaving game chrome (indicator, gestures, idle timer) is driven
         // by the ROUTER, not view lifecycle — onAppear/onDisappear proved unreliable

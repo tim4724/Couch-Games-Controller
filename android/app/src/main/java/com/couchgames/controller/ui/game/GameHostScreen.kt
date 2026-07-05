@@ -420,6 +420,10 @@ private fun GameHostContent(
   if (showProfile) {
     ProfileSheet(
       initial = profile,
+      // Use the game's theme-color as the sheet surface, but only when it's dark
+      // enough to keep the sheet's white text legible (white ≥ 4.5:1 needs luminance
+      // < ~0.18); a lighter theme-color falls back to the neutral surface.
+      surfaceTint = pageTheme.bar?.takeIf { it.luminance() < 0.18f },
       onDismiss = { showProfile = false },
       onSave = { saved ->
         ProfileStore.save(context, saved)
@@ -481,9 +485,17 @@ private fun LeaveBar(
   }
 }
 
-// Black or white, whichever contrasts with [color] — game-supplied colors arrive
-// without a paired "on" color.
-private fun contentColorOn(color: Color) = if (color.luminance() > 0.5f) Color.Black else Color.White
+// Black or white over [color], whichever wins on WCAG contrast — game-supplied
+// colors arrive without a paired "on" color. A naive luminance > 0.5 split picks
+// white on saturated mid-tones (a coral like #FF6B6B sits at ~0.33) even though
+// black reads far better there; the real black/white crossover is at luminance
+// ≈ 0.179, so compare the two contrasts instead.
+private fun contentColorOn(color: Color): Color {
+  val l = color.luminance()
+  val blackContrast = (l + 0.05f) / 0.05f   // black L = 0
+  val whiteContrast = 1.05f / (l + 0.05f)   // white L = 1
+  return if (blackContrast >= whiteContrast) Color.Black else Color.White
+}
 
 /**
  * Confines the WebView to the game's own domains (subdomains included). Only https

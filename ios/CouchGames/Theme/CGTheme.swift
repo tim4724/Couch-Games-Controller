@@ -145,9 +145,15 @@ func relativeLuminance(_ color: Color) -> Double {
     return 0.2126 * linearize(r) + 0.7152 * linearize(g) + 0.0722 * linearize(b)
 }
 
-/// Content color over an arbitrary background: luminance > 0.5 → black, else white.
+/// Black or white over an arbitrary background, whichever wins on WCAG contrast.
+/// A naive luminance > 0.5 split picks white on saturated mid-tones (a coral like
+/// #FF6B6B sits at ~0.33) even though black reads far better there — the real
+/// black/white crossover is at luminance ≈ 0.179, so compare the two contrasts.
 func contentColorOn(_ color: Color) -> Color {
-    relativeLuminance(color) > 0.5 ? .black : .white
+    let l = relativeLuminance(color)
+    let blackContrast = (l + 0.05) / 0.05   // black L = 0
+    let whiteContrast = 1.05 / (l + 0.05)   // white L = 1
+    return blackContrast >= whiteContrast ? .black : .white
 }
 
 // MARK: - Environment

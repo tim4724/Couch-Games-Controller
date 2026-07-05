@@ -18,6 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
@@ -38,11 +39,13 @@ fun ProfileSheet(
   onSave: (Profile) -> Unit,
   title: String = stringResource(R.string.name),
   cta: String = stringResource(R.string.save),
+  // In-game: the host passes the game's theme-color to tint the sheet surface.
+  surfaceTint: Color? = null,
 ) {
   var name by remember { mutableStateOf(initial.name) }
 
   // No auto-focus on purpose: the sheet settles first, the keyboard comes on tap.
-  AppSheet(onDismiss = onDismiss) {
+  AppSheet(onDismiss = onDismiss, surfaceTint = surfaceTint) {
     Column(
       Modifier.fillMaxWidth().imePadding()
         .padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 28.dp),

@@ -17,6 +17,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.window.DialogWindowProvider
@@ -32,14 +33,22 @@ import androidx.core.view.WindowInsetsControllerCompat
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+fun AppSheet(
+  onDismiss: () -> Unit,
+  // A game's theme-color, used as the sheet surface so an in-game sheet reads as part
+  // of the game. Null (the default) keeps the neutral surface. Callers gate on
+  // luminance so the surface stays dark enough for the sheet's light text.
+  surfaceTint: Color? = null,
+  content: @Composable ColumnScope.() -> Unit,
+) {
+  // The default surfaceContainerLow is one step above our darkened dark background —
+  // the sheet edge vanished at night. High keeps it legible.
+  val container = surfaceTint ?: MaterialTheme.colorScheme.surfaceContainerHigh
   ModalBottomSheet(
     onDismissRequest = onDismiss,
     sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     dragHandle = null,
-    // The default surfaceContainerLow is one step above our darkened dark
-    // background — the sheet edge vanished at night. High keeps it legible.
-    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+    containerColor = container,
   ) {
     MirrorHostSystemBars()
     content()

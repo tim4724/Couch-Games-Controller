@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Light (day) tile: off-white (PrimaryDark in Color.kt). The graphite dark
-     variant lives in drawable-night/. Neutral chrome; game posters carry color. -->
+<!-- Dark (night) tile: graphite (PrimaryLight in Color.kt). Day variant is the
+     off-white tile in drawable/. Neutral chrome; game posters carry the color. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
     <path
-        android:fillColor="#E6E1E9"
+        android:fillColor="#202024"
         android:pathData="M0,0h108v108h-108z" />
 </vector>

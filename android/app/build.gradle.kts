@@ -131,4 +131,7 @@ dependencies {
   // Navigation
   implementation(libs.androidx.navigation3.ui)
   implementation(libs.androidx.navigation3.runtime)
+
+  // WebView compat — document-start script injection for the legal viewer.
+  implementation(libs.androidx.webkit)
 }

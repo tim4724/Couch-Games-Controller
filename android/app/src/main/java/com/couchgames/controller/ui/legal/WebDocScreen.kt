@@ -17,7 +17,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
 import com.couchgames.controller.ui.components.BackScaffold
+
+// The page renders its own <h1> title (e.g. "DATENSCHUTZERKLÄRUNG"); in-app the
+// nav bar already shows it, so hide the page copy to avoid the duplicate. Injected
+// at document-start (below) so the heading never flashes before it's hidden.
+private const val HIDE_HEADING_JS = """
+  (function () {
+    if (document.getElementById('cg-hide-heading')) return;
+    var s = document.createElement('style');
+    s.id = 'cg-hide-heading';
+    s.textContent = '.legal-shell > h1{display:none !important;}';
+    (document.head || document.documentElement).appendChild(s);
+  })();
+"""
+
+// The legal pages are all served from this origin; scope the injected script to it.
+private val LEGAL_ORIGINS = setOf("https://couch-games.com")
 
 /**
  * A read-only in-app viewer for a hosted legal document (privacy / imprint). Kept
@@ -56,12 +74,21 @@ fun WebDocScreen(url: String, title: String, onBack: () -> Unit) {
             settings.allowFileAccessFromFileURLs = false
             @Suppress("DEPRECATION")
             settings.allowUniversalAccessFromFileURLs = false
+            // Best-effort: hide the page's own heading before first paint. Falls
+            // back to a post-load inject (brief flash) on WebViews that lack the
+            // document-start feature.
+            val hasDocumentStart =
+              WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
+            if (hasDocumentStart) {
+              WebViewCompat.addDocumentStartJavaScript(this, HIDE_HEADING_JS, LEGAL_ORIGINS)
+            }
             webViewClient = object : WebViewClient() {
               override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
                 loading = true
               }
               override fun onPageFinished(view: WebView?, url: String?) {
                 loading = false
+                if (!hasDocumentStart) view?.evaluateJavascript(HIDE_HEADING_JS, null)
               }
             }
             loadUrl(url)

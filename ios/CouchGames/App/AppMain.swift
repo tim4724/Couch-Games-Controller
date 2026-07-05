@@ -8,8 +8,10 @@ import AVFAudio
 
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Muted trailer / game audio must never interrupt other audio (music, podcasts).
-        try? AVAudioSession.sharedInstance().setCategory(.ambient, options: [.mixWithOthers])
+        // .playback so WebView game sound is audible even with the silent switch on;
+        // .mixWithOthers so it layers over the user's music/podcasts instead of stopping
+        // them (the trailer is muted, so it stays silent regardless).
+        try? AVAudioSession.sharedInstance().setCategory(.playback, options: [.mixWithOthers])
         return true
     }
 }

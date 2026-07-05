@@ -124,6 +124,46 @@ Recommended pattern — correct in the shell AND in a plain browser:
 }
 ```
 
+## 6. Game display → relay, at room create: controller-URL template
+
+So a player who **types a room code** (rather than scanning the display's QR) lands
+on the right game, the game's display registers a *controller-URL template* with the
+shared relay when it creates the room. This is the discovery counterpart to §1: the QR
+carries the full URL, a typed code carries nothing, so the relay has to know where the
+code lives.
+
+The template rides the relay's `create` message:
+
+```
+Client → relay:  create { clientId, maxClients, url? }
+```
+
+- `url` is an absolute **https** template of the join-URL shape, with `{room}` and
+  `{instance}` placeholders — e.g. `https://play.example.com/{room}#{instance}`. It must
+  match the URL a scanned QR would produce (room code as the first path segment; instance
+  in the fragment, kept out of request logs).
+- The relay accepts only absolute-https templates and **rejects the whole create** on an
+  invalid one, so plain-http origins (local dev, E2E) register none — pass no `url`.
+- Registering a `url` is optional. A display that registers none but is served from a
+  Couch-Games-owned origin can still be found via that `origin` (below).
+
+The launcher resolves a typed code through `GET {relayBase}/room/{code}`:
+
+```
+200 → { url?, origin? }   404 → not found
+```
+
+- `url` — the relay's stored template with `{room}`/`{instance}` **already substituted**
+  for this room (the launcher never sees raw placeholders).
+- `origin` — the room's declared origin, a fallback when no `url` template was registered;
+  the launcher resolves the bare code against it (`<origin>/<code>`).
+- **Both are host-declared and UNTRUSTED.** The launcher re-validates the host against the
+  `games-manifest.json` allow-list before loading — a relay entry can't redirect a code to
+  an arbitrary origin.
+
+Registering a `url` is what makes typed-code join deterministic; without it a code only
+resolves when the game is the sole live game or is disambiguated by `origin`.
+
 ## Checklist for a new game
 
 1. Read `cgv` + `cgName`; when `cgv=1`: skip name entry, don't persist the name,
@@ -133,7 +173,8 @@ Recommended pattern — correct in the shell AND in a plain browser:
    chokepoint when available, else fall back to normal web behavior.
 4. Keep interactive UI inside the safe zone (§5).
 5. *(Optional)* Declare `theme-color` / `cg-accent-color` metas (§4).
-6. Declare the game in `games-manifest.json` (hosts, controllerBaseUrl, room-code
+6. Register the controller-URL template on room create so typed codes resolve (§6).
+7. Declare the game in `games-manifest.json` (hosts, controllerBaseUrl, room-code
    format). No other launcher changes needed.
 
 Keep all contract code in the game's own bundle — game origins typically ship

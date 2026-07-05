@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
+import android.graphics.Bitmap
 import android.graphics.Rect
 import android.net.Uri
 import android.os.Build
@@ -11,6 +12,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -78,6 +80,7 @@ import com.couchgames.controller.R
 import com.couchgames.controller.data.LAUNCHER_HOST
 import com.couchgames.controller.data.Profile
 import com.couchgames.controller.data.ProfileStore
+import com.couchgames.controller.data.RecentRoomStore
 import com.couchgames.controller.data.hostInDomain
 import com.couchgames.controller.theme.CouchGamesTheme
 import com.couchgames.controller.ui.components.PlayerChip
@@ -315,6 +318,19 @@ private fun GameHostContent(
               pushSafeZone()
             },
           )
+          // Capture the page favicon (keyed by host) so the home rejoin card can
+          // show the game's own icon instead of a generic play glyph. WebView hands
+          // us a decoded bitmap — no extra fetch — and a miss just keeps the glyph.
+          webChromeClient = object : WebChromeClient() {
+            override fun onReceivedIcon(view: WebView?, icon: Bitmap?) {
+              if (icon != null) RecentRoomStore.putFavicon(icon)
+            }
+
+            // The page's own name for the rejoin card (ground truth over the manifest).
+            override fun onReceivedTitle(view: WebView?, title: String?) {
+              if (!title.isNullOrBlank()) RecentRoomStore.putTitle(title)
+            }
+          }
           keepScreenOn = true
           // Opt the controller surface out of the system back-gesture so edge swipes
           // reach the game (full-height only works because the nav bar is hidden).

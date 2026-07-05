@@ -140,6 +140,7 @@ struct GameWebView: UIViewRepresentable {
         var lastInjectedName = ""
         var lastPushedZone = SafeZone()
         private var gameEndFired = false  // fire-once: a game spamming gameEnded must not pop extra entries
+        private var faviconCaptured = false  // once per session — didFinish fires on every navigation
 
         init(parent: GameWebView) {
             self.parent = parent
@@ -184,6 +185,30 @@ struct GameWebView: UIViewRepresentable {
             }
             webView.evaluateJavaScript(GameHostJS.watchPageTheme, completionHandler: nil)
             webView.evaluateJavaScript(GameHostJS.safeZonePush(parent.safeZone), completionHandler: nil)
+            captureFavicon(webView)
+            // The page's own name for the rejoin card (ground truth over the manifest).
+            if let title = webView.title, !title.isEmpty {
+                RecentRoomStore.putTitle(title)
+            }
+        }
+
+        /// Read the page's declared icon URL (WKWebView has no favicon API), fetch it
+        /// off-main into the current room's slot, so the home rejoin card can show the
+        /// game's own icon instead of a generic play glyph. Once per session; a miss
+        /// (no icon, non-https, bad response) silently leaves the glyph in place.
+        private func captureFavicon(_ webView: WKWebView) {
+            guard !faviconCaptured else { return }
+            faviconCaptured = true
+            webView.evaluateJavaScript(GameHostJS.faviconHref) { result, _ in
+                guard let href = result as? String, let url = URL(string: href), url.scheme == "https" else { return }
+                Task.detached(priority: .utility) {
+                    guard let (data, response) = try? await URLSession.shared.data(from: url),
+                          (response as? HTTPURLResponse).map({ (200..<300).contains($0.statusCode) }) ?? false,
+                          data.count <= 512 * 1024,
+                          let image = UIImage(data: data) else { return }
+                    RecentRoomStore.putFavicon(image)
+                }
+            }
         }
 
         /// The game→launcher half of the contract (v1). All arguments are untrusted page input.

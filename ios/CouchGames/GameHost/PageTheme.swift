@@ -146,6 +146,22 @@ enum GameHostJS {
         return "window.CouchGames && typeof window.CouchGames.setName === 'function' && window.CouchGames.setName(\(quoted));"
     }
 
+    /// Resolve the page's best icon URL (absolute). Prefers apple-touch-icon (usually
+    /// 180px, so it stays crisp on the rejoin card) over a rel~=icon, and falls back
+    /// to the conventional /favicon.ico. Returns null when the page declares nothing
+    /// and there's no default — the native side then keeps the play glyph.
+    static let faviconHref = """
+    (function () {
+      function pick(sel) {
+        var l = document.querySelector(sel);
+        return l && l.href ? l.href : null;
+      }
+      return pick('link[rel~="apple-touch-icon"]')
+        || pick('link[rel~="icon"]')
+        || (location.origin ? location.origin + '/favicon.ico' : null);
+    })();
+    """
+
     /// Publish the safe zone to the page as CSS vars on <html> (CONTRACT.md §5), in CSS px.
     static func safeZonePush(_ zone: SafeZone) -> String {
         "(function () { var s = document.documentElement.style;"

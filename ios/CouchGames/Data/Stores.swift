@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 // MARK: - ProfileStore
 
@@ -16,47 +17,130 @@ enum ProfileStore {
     }
 }
 
-// MARK: - RecentRoomStore
+// MARK: - RecentRoom
 
+/// A captured favicon plus whether its opaque content reads as light.
+struct Favicon {
+    let image: UIImage
+    let contentIsLight: Bool
+
+    init(_ image: UIImage) {
+        self.image = image
+        self.contentIsLight = image.contentIsLight()
+    }
+}
+
+/// The room this phone is in or just left, with everything the home rejoin card needs.
+/// `joinUrl` omits cgv/cgName — re-wrapped with the current name at rejoin. `favicon`
+/// and `title` are captured from the controller page mid-session, so they're nil until
+/// then.
+struct RecentRoom {
+    let game: Game
+    let joinUrl: String
+    let roomCode: String
+    let favicon: Favicon?
+    let title: String?
+}
+
+/// Single-slot, in-memory memory of the current room. Deliberately not persisted:
+/// rejoin is a same-session convenience, so the slot dies with the process and ages
+/// out after `ttl` — a fresh launch simply shows no card. `remember` sets the base at
+/// join; the favicon and title arrive later, captured in-game.
 enum RecentRoomStore {
 
-    static let maxAgeMillis: Int64 = 12 * 60 * 60 * 1000
+    private static let ttl: TimeInterval = 20 * 60
+    private static let maxTitleLength = 64
 
-    private static let joinUrlKey = "cg_recent.joinUrl"
-    private static let gameIdKey = "cg_recent.gameId"
-    private static let roomCodeKey = "cg_recent.roomCode"
-    private static let savedAtKey = "cg_recent.savedAt"
+    private static let lock = NSLock()
+    private static var game: Game?
+    private static var joinUrl = ""
+    private static var roomCode = ""
+    private static var favicon: Favicon?
+    private static var title: String?
+    private static var savedAt = Date.distantPast
 
-    /// No-op unless the outcome is .success. Single-slot store — overwrites any previous record.
-    static func save(_ outcome: JoinOutcome, defaults: UserDefaults = .standard) {
-        guard case .success(let game, let roomCode, _, _, let joinUrl) = outcome else { return }
-        defaults.set(joinUrl, forKey: joinUrlKey)
-        defaults.set(game.id, forKey: gameIdKey)
-        defaults.set(roomCode, forKey: roomCodeKey)
-        defaults.set(Int(Date().timeIntervalSince1970 * 1000), forKey: savedAtKey)
+    static func remember(game: Game, joinUrl: String, roomCode: String) {
+        lock.lock(); defer { lock.unlock() }
+        self.game = game
+        self.joinUrl = joinUrl
+        self.roomCode = roomCode
+        favicon = nil
+        title = nil
+        savedAt = Date()
     }
 
-    /// nil if any of joinUrl/gameId/roomCode is missing, or the record is older than 12 h
-    /// (missing savedAt reads as 0 → always expired). Stale records are ignored, not deleted.
-    static func load(now: Date = Date(), defaults: UserDefaults = .standard) -> RecentRoom? {
-        guard let joinUrl = defaults.string(forKey: joinUrlKey),
-              let gameId = defaults.string(forKey: gameIdKey),
-              let roomCode = defaults.string(forKey: roomCodeKey) else {
-            return nil
-        }
-        let savedAt = (defaults.object(forKey: savedAtKey) as? NSNumber)?.int64Value ?? 0
-        let nowMillis = Int64(now.timeIntervalSince1970 * 1000)
-        if nowMillis - savedAt > maxAgeMillis {
-            return nil
-        }
-        return RecentRoom(joinUrl: joinUrl, gameId: gameId, roomCode: roomCode)
+    static func putFavicon(_ image: UIImage) {
+        let captured = Favicon(image)
+        lock.lock(); defer { lock.unlock() }
+        if game != nil { favicon = captured }
     }
 
-    static func clear(defaults: UserDefaults = .standard) {
-        defaults.removeObject(forKey: joinUrlKey)
-        defaults.removeObject(forKey: gameIdKey)
-        defaults.removeObject(forKey: roomCodeKey)
-        defaults.removeObject(forKey: savedAtKey)
+    static func putTitle(_ raw: String) {
+        let clean = raw
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .prefix(maxTitleLength)
+        lock.lock(); defer { lock.unlock() }
+        if game != nil, !clean.isEmpty { title = String(clean) }
+    }
+
+    /// The current room while still fresh, else nil (clearing an aged-out slot).
+    static func current() -> RecentRoom? {
+        lock.lock(); defer { lock.unlock() }
+        guard let game else { return nil }
+        if Date().timeIntervalSince(savedAt) > ttl {
+            clearLocked()
+            return nil
+        }
+        return RecentRoom(game: game, joinUrl: joinUrl, roomCode: roomCode, favicon: favicon, title: title)
+    }
+
+    static func clear() {
+        lock.lock(); defer { lock.unlock() }
+        clearLocked()
+    }
+
+    // Caller holds the lock.
+    private static func clearLocked() {
+        game = nil
+        joinUrl = ""
+        roomCode = ""
+        favicon = nil
+        title = nil
+        savedAt = .distantPast
+    }
+}
+
+private extension UIImage {
+    /// Alpha-weighted mean perceptual luminance of the opaque pixels > 0.6. Renders
+    /// into a small premultiplied RGBA buffer, so a transparent surround can't drag
+    /// the mean toward black and the cost stays fixed regardless of source size.
+    func contentIsLight() -> Bool {
+        guard let cg = cgImage else { return false }
+        let side = 16
+        var pixels = [UInt8](repeating: 0, count: side * side * 4)
+        guard let ctx = CGContext(
+            data: &pixels, width: side, height: side, bitsPerComponent: 8,
+            bytesPerRow: side * 4, space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return false }
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: side, height: side))
+        var lumSum = 0.0, alphaSum = 0.0
+        var i = 0
+        while i < pixels.count {
+            let a = Double(pixels[i + 3]) / 255.0
+            if a > 0 {
+                // Premultiplied: r/g/b are already * alpha, so summing them is the
+                // alpha-weighted luminance; divide by total alpha for the mean.
+                let r = Double(pixels[i]) / 255.0
+                let g = Double(pixels[i + 1]) / 255.0
+                let b = Double(pixels[i + 2]) / 255.0
+                lumSum += 0.299 * r + 0.587 * g + 0.114 * b
+                alphaSum += a
+            }
+            i += 4
+        }
+        return alphaSum > 0 && lumSum / alphaSum > 0.6
     }
 }
 

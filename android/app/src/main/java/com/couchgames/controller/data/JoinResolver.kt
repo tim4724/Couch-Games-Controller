@@ -18,8 +18,6 @@ sealed interface JoinOutcome {
   data class Success(
     val game: Game,
     val roomCode: String,
-    val claim: String?,
-    val instance: String?,
     val joinUrl: String,
   ) : JoinOutcome
 
@@ -27,15 +25,17 @@ sealed interface JoinOutcome {
 }
 
 /**
- * Resolves a scanned/typed value into a controller join target, grounded in the
- * real payload: https://hexstacker.com/<CODE> (room code = first path segment;
- * optional ?claim and #instance). Never throws.
+ * Resolves a scanned/typed value into a controller join target. Never throws.
  *
- * Principle: a trusted domain IS the controller — a scanned URL loads its own
- * origin (staging and preview deployments included), it is never rewritten to
- * another host. The two exceptions carry no origin of their own: bare typed
- * codes and canonical couch-games.com/<code> links (bare domain or www), which
- * resolve to the sole live game's controllerBaseUrl.
+ * Principle: a trusted host IS the controller. A scanned URL on a game's own domain
+ * (or a couch-games.com preview subdomain) loads VERBATIM — we vouch for the host and
+ * the https scheme but never presume its path/query layout. The room code is then
+ * best-effort ([extractRoomCode]), used only to label and liveness-poll the rejoin
+ * card; a URL that hides it still joins fine.
+ *
+ * The two code-first exceptions carry no origin of their own and resolve to the sole
+ * live game's controllerBaseUrl: bare typed codes, and canonical couch-games.com/<code>
+ * links (bare domain or www).
  */
 object JoinResolver {
 
@@ -65,14 +65,36 @@ object JoinResolver {
 
     // A game's own domain, or a couch-games.com subdomain (preview/branch
     // deployment). The subdomain prefix names the game when it can ("tinytrack-…"),
-    // purely for title/metadata — the URL itself is what gets loaded.
+    // purely for title/metadata — the scanned URL itself is what gets loaded.
     val game = games.firstOrNull { g -> g.hosts.any { hostInDomain(host, it) } }
       ?: if (hostInDomain(host, LAUNCHER_HOST)) {
         games.firstOrNull { host.lowercase().startsWith(it.id) } ?: launcherGame()
       } else {
         return JoinOutcome.Failure(R.string.error_not_couch_games_room)
       }
-    return joinAt("https://$host", game, segs.firstOrNull().orEmpty(), claim, instance)
+    return joinVerbatim(s, uri, game)
+  }
+
+  // A trusted host's scanned URL IS its controller — load it exactly as scanned rather
+  // than presuming its path/query layout. We vouch only for the host (already matched)
+  // and an https scheme with no embedded credentials; the room code is best-effort. The
+  // scanned URL carries its own claim/instance, so there's nothing to re-attach here.
+  private fun joinVerbatim(url: String, uri: Uri, game: Game): JoinOutcome {
+    if (!"https".equals(uri.scheme, ignoreCase = true) || !uri.userInfo.isNullOrEmpty()) {
+      return JoinOutcome.Failure(R.string.error_not_couch_games_room)
+    }
+    return JoinOutcome.Success(game, extractRoomCode(uri), url)
+  }
+
+  // Best-effort room code: the first room-code-shaped token (Base58, exact length) in a
+  // path segment, else a query value. "" when the URL surfaces none — the join still
+  // loads; the rejoin card just can't show or liveness-poll the room.
+  private fun extractRoomCode(uri: Uri): String {
+    uri.pathSegments.firstOrNull(::validCode)?.let { return it }
+    for (name in uri.queryParameterNames) {
+      uri.getQueryParameters(name).firstOrNull(::validCode)?.let { return it }
+    }
+    return ""
   }
 
   private fun soleLiveGameJoin(games: List<Game>, roomCode: String, claim: String?, instance: String?): JoinOutcome {
@@ -90,7 +112,7 @@ object JoinResolver {
       if (!claim.isNullOrEmpty()) append("?claim=").append(Uri.encode(claim))
       if (!instance.isNullOrEmpty()) append('#').append(Uri.encode(instance))
     }
-    return JoinOutcome.Success(game, roomCode, claim, instance, joinUrl)
+    return JoinOutcome.Success(game, roomCode, joinUrl)
   }
 
   // Stand-in metadata for a couch-games.com subdomain that doesn't map to any

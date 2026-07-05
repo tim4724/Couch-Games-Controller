@@ -1,50 +1,110 @@
 package com.couchgames.controller.data
 
-import android.content.Context
+import android.graphics.Bitmap
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+
+/** A captured favicon plus whether its opaque content reads as light. */
+class Favicon(val image: ImageBitmap, val contentIsLight: Boolean)
 
 /**
- * The last room this phone joined — enough to offer a one-tap rejoin from the
- * home screen. [joinUrl] is the resolved controller URL WITHOUT profile params
- * (it gets re-wrapped with the current name at rejoin time).
+ * The room this phone is in or just left, with everything the home rejoin card needs.
+ * [joinUrl] omits cgv/cgName — re-wrapped with the current name at rejoin. [favicon]
+ * and [title] are captured from the controller page mid-session, so they're null until
+ * then.
  */
-data class RecentRoom(
+class RecentRoom(
+  val game: Game,
   val joinUrl: String,
-  val gameId: String,
   val roomCode: String,
+  val favicon: Favicon?,
+  val title: String?,
 )
 
+/**
+ * Single-slot, in-memory memory of the current room. Deliberately not persisted:
+ * rejoin is a same-session convenience, so the slot dies with the process and ages out
+ * after [TTL_MS] — a fresh launch simply shows no card. [remember] sets the base at
+ * join; the favicon and title arrive later, captured in-game.
+ */
 object RecentRoomStore {
-  private const val PREFS = "cg_recent"
-  private const val KEY_URL = "joinUrl"
-  private const val KEY_GAME = "gameId"
-  private const val KEY_CODE = "roomCode"
-  private const val KEY_AT = "savedAt"
+  private const val TTL_MS = 20L * 60 * 1000
 
-  // Rooms don't outlive a couch session; past this we don't even probe the relay.
-  private const val MAX_AGE_MS = 12L * 60 * 60 * 1000
+  private var game: Game? = null
+  private var joinUrl: String = ""
+  private var roomCode: String = ""
+  private var favicon: Favicon? = null
+  private var title: String? = null
+  private var savedAt: Long = 0
 
-  fun save(context: Context, target: JoinOutcome.Success) {
-    prefs(context).edit()
-      .putString(KEY_URL, target.joinUrl)
-      .putString(KEY_GAME, target.game.id)
-      .putString(KEY_CODE, target.roomCode)
-      .putLong(KEY_AT, System.currentTimeMillis())
-      .apply()
+  @Synchronized
+  fun remember(game: Game, joinUrl: String, roomCode: String) {
+    this.game = game
+    this.joinUrl = joinUrl
+    this.roomCode = roomCode
+    this.favicon = null
+    this.title = null
+    this.savedAt = System.currentTimeMillis()
   }
 
-  fun load(context: Context): RecentRoom? {
-    val p = prefs(context)
-    val url = p.getString(KEY_URL, null) ?: return null
-    val game = p.getString(KEY_GAME, null) ?: return null
-    val code = p.getString(KEY_CODE, null) ?: return null
-    if (System.currentTimeMillis() - p.getLong(KEY_AT, 0L) > MAX_AGE_MS) return null
-    return RecentRoom(url, game, code)
+  fun putFavicon(bitmap: Bitmap) {
+    // Decode + luminance run off the lock; only the slot assignment is guarded.
+    val captured = Favicon(bitmap.asImageBitmap(), bitmap.contentIsLight())
+    synchronized(this) { if (game != null) favicon = captured }
   }
 
-  fun clear(context: Context) {
-    prefs(context).edit().clear().apply()
+  @Synchronized
+  fun putTitle(raw: String) {
+    if (game == null) return
+    val clean = raw.trim().replace(Regex("\\s+"), " ").take(MAX_TITLE_LEN)
+    if (clean.isNotEmpty()) title = clean
   }
 
-  private fun prefs(context: Context) =
-    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+  /** The current room while still fresh, else null (clearing an aged-out slot). */
+  @Synchronized
+  fun current(): RecentRoom? {
+    val g = game ?: return null
+    if (System.currentTimeMillis() - savedAt > TTL_MS) {
+      clear()
+      return null
+    }
+    return RecentRoom(g, joinUrl, roomCode, favicon, title)
+  }
+
+  @Synchronized
+  fun clear() {
+    game = null
+    joinUrl = ""
+    roomCode = ""
+    favicon = null
+    title = null
+    savedAt = 0
+  }
+
+  private const val MAX_TITLE_LEN = 64
+}
+
+// Alpha-weighted mean perceptual luminance of the icon's opaque pixels > 0.6. Weighting
+// by alpha keeps a transparent surround from dragging the mean toward black. Scaled to a
+// fixed 16×16 first, so the cost is constant regardless of source size (a 180px
+// apple-touch-icon included) and it's one getPixels() read, not hundreds of getPixel().
+private fun Bitmap.contentIsLight(): Boolean {
+  val side = 16
+  val small = Bitmap.createScaledBitmap(this, side, side, true)
+  val px = IntArray(side * side)
+  small.getPixels(px, 0, side, 0, 0, side, side)
+  if (small !== this) small.recycle()
+  var lumSum = 0.0
+  var alphaSum = 0.0
+  for (p in px) {
+    val a = (p ushr 24 and 0xFF) / 255.0
+    if (a > 0.0) {
+      val r = (p ushr 16 and 0xFF) / 255.0
+      val g = (p ushr 8 and 0xFF) / 255.0
+      val b = (p and 0xFF) / 255.0
+      lumSum += (0.299 * r + 0.587 * g + 0.114 * b) * a
+      alphaSum += a
+    }
+  }
+  return alphaSum > 0.0 && lumSum / alphaSum > 0.6
 }

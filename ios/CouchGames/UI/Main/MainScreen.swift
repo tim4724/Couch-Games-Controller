@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - MainScreen (home / launcher)
 
@@ -38,7 +39,7 @@ struct MainScreen: View {
     @State private var codeLoading = false
     @State private var codeError: String? = nil
     @State private var scanRequest: ScanRequest? = nil
-    @State private var rejoin: RejoinTarget? = nil
+    @State private var rejoin: RecentRoom? = nil
     @State private var infoGame: Game? = nil
     // A scan/enter action tapped inside the info sheet, run once it dismisses.
     @State private var pendingSheetAction: AfterName? = nil
@@ -59,8 +60,8 @@ struct MainScreen: View {
             ScrollView {
                 VStack(spacing: 20) {
                     if let rejoin {
-                        RejoinCard(target: rejoin) {
-                            resolveAndJoin(rejoin.room.joinUrl)
+                        RejoinCard(room: rejoin) {
+                            resolveAndJoin(rejoin.joinUrl)
                         }
                         .transition(.opacity.combined(with: .scale(scale: 0.96)))
                     }
@@ -271,9 +272,9 @@ struct MainScreen: View {
 
     @MainActor
     private func launchJoin(_ target: JoinOutcome, _ p: Profile) {
-        guard case .success(let game, _, _, _, let joinUrl) = target else { return }
+        guard case .success(let game, let roomCode, let joinUrl) = target else { return }
         successTick += 1
-        RecentRoomStore.save(target)
+        RecentRoomStore.remember(game: game, joinUrl: joinUrl, roomCode: roomCode)
         onJoin(withProfile(joinUrl, p), game.name, game.hosts)
     }
 
@@ -338,16 +339,19 @@ struct MainScreen: View {
 
     @MainActor
     private func runRejoinPoll() async {
-        guard let recent = RecentRoomStore.load() else { return }
-        guard let game = games.first(where: { $0.id == recent.gameId }) else { return }
+        guard let recent = RecentRoomStore.current() else { return }
+        // No room code (the scanned URL didn't surface one) → we can't liveness-poll, so
+        // surface the card unverified. Tapping a dead room is handled by gameEnded.
+        if recent.roomCode.isEmpty {
+            withAnimation(.spring(duration: 0.45)) { rejoin = recent }
+            return
+        }
         while !Task.isCancelled {
-            let result = await RoomDirectory.lookup(code: recent.roomCode, relayBase: game.roomRelayBase)
+            let result = await RoomDirectory.lookup(code: recent.roomCode, relayBase: recent.game.roomRelayBase)
             if Task.isCancelled { return }
             switch result {
             case .found:
-                withAnimation(.spring(duration: 0.45)) {
-                    rejoin = RejoinTarget(room: recent, game: game)
-                }
+                withAnimation(.spring(duration: 0.45)) { rejoin = recent }
             case .notFound:
                 RecentRoomStore.clear()
                 withAnimation(.spring(duration: 0.45)) {
@@ -386,15 +390,10 @@ private struct ScanRequest: Identifiable {
     let profile: Profile
 }
 
-private struct RejoinTarget {
-    let room: RecentRoom
-    let game: Game
-}
-
 // MARK: - RejoinCard
 
 private struct RejoinCard: View {
-    let target: RejoinTarget
+    let room: RecentRoom
     let onTap: () -> Void
 
     @Environment(\.cgPalette) private var palette
@@ -402,16 +401,20 @@ private struct RejoinCard: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 14) {
-                Image(systemName: "play.circle.fill")
-                    .font(.system(size: 34))
-                    .symbolRenderingMode(.hierarchical)
+                RejoinIcon(favicon: room.favicon)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Rejoin \(target.game.name)")
+                    // Just the controller's own page title (captured this session),
+                    // falling back to the manifest's curated name until it's captured.
+                    Text(room.title ?? room.game.name)
                         .font(.cgTitleMedium)
                         .foregroundStyle(palette.onSecondaryContainer)
-                    Text("Room \(target.room.roomCode)")
-                        .font(.cgBodyMedium)
-                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    if !room.roomCode.isEmpty {
+                        Text("Room \(room.roomCode)")
+                            .font(.cgBodyMedium)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Image(systemName: "chevron.right")
@@ -426,6 +429,41 @@ private struct RejoinCard: View {
             )
         }
         .buttonStyle(PressableCardButtonStyle())
+    }
+}
+
+// MARK: - RejoinIcon
+
+/// The rejoin card's leading glyph: the game's captured controller favicon on a tile
+/// whose shade is chosen from the icon's OWN content — a dark plate under a
+/// light/transparent icon, a white plate under a dark one — so it never washes out
+/// against the light card or a same-toned plate. Falls back to a play symbol when
+/// nothing's been captured this session.
+private struct RejoinIcon: View {
+    let favicon: Favicon?
+
+    @Environment(\.cgPalette) private var palette
+
+    var body: some View {
+        if let favicon {
+            let plate: Color = favicon.contentIsLight ? Color(white: 0.13) : .white
+            // ~10pt of breathing room inside the tile so the icon never touches the edge.
+            Image(uiImage: favicon.image)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 28, height: 28)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .frame(width: 48, height: 48)
+                .background(plate, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(palette.outlineVariant, lineWidth: 1)
+                )
+        } else {
+            Image(systemName: "play.circle.fill")
+                .font(.system(size: 40))
+                .symbolRenderingMode(.hierarchical)
+        }
     }
 }
 

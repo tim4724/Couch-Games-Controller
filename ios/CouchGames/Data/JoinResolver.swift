@@ -3,7 +3,7 @@ import Foundation
 // MARK: - Outcome
 
 enum JoinOutcome: Equatable {
-    case success(game: Game, roomCode: String, claim: String?, instance: String?, joinUrl: String)
+    case success(game: Game, roomCode: String, joinUrl: String)
     case failure(message: String)
 }
 
@@ -25,37 +25,57 @@ enum JoinResolver {
             return soleLiveGameJoin(games: games, roomCode: trimmed, claim: nil, instance: nil)
         }
 
-        // Path segments: split on "/", empties dropped; room code = first segment or "".
-        let segments = components.path.split(separator: "/").map(String.init)
-        let roomCode = segments.first ?? ""
         let claim = components.queryItems?.first(where: { $0.name == "claim" })?.value
         let instance: String? = components.percentEncodedFragment.map { $0.removingPercentEncoding ?? $0 }
-
         let lowerHost = host.lowercased()
 
-        // Canonical launcher links: bare domain or www only (exact match, not subdomains).
+        // Canonical launcher links (bare domain or www): code-first, sole live game hosts them.
         if lowerHost == CG.launcherHost || lowerHost == "www." + CG.launcherHost {
-            return soleLiveGameJoin(games: games, roomCode: roomCode, claim: claim, instance: instance)
+            let code = components.path.split(separator: "/").map(String.init).first ?? ""
+            return soleLiveGameJoin(games: games, roomCode: code, claim: claim, instance: instance)
         }
 
-        // A trusted domain IS the controller: always https, port/userinfo dropped.
-        let base = "https://" + host
-
-        // Game-domain match: first game whose hosts allow-list covers this host.
-        if let game = games.first(where: { g in g.hosts.contains(where: { hostInDomain(host, $0) }) }) {
-            return joinAt(base: base, game: game, roomCode: roomCode, claim: claim, instance: instance)
+        // A game's own domain (or a couch-games.com preview subdomain): the scanned URL
+        // IS the controller — load it verbatim, don't presume its layout.
+        let game: Game
+        if let matched = games.first(where: { g in g.hosts.contains(where: { hostInDomain(host, $0) }) }) {
+            game = matched
+        } else if hostInDomain(host, CG.launcherHost) {
+            game = games.first(where: { lowerHost.hasPrefix($0.id) }) ?? Game.syntheticLauncher
+        } else {
+            return .failure(message: String(localized: "That code isn’t a Couch Games room."))
         }
-
-        // couch-games.com subdomain (preview/branch deployments): id-prefix match, else synthetic launcher.
-        if hostInDomain(host, CG.launcherHost) {
-            let game = games.first(where: { lowerHost.hasPrefix($0.id) }) ?? Game.syntheticLauncher
-            return joinAt(base: base, game: game, roomCode: roomCode, claim: claim, instance: instance)
-        }
-
-        return .failure(message: String(localized: "That code isn’t a Couch Games room."))
+        return joinVerbatim(url: trimmed, components: components, game: game)
     }
 
     // MARK: Internals
+
+    /// A trusted host's scanned URL IS its controller — load it exactly as scanned rather
+    /// than presuming its path/query layout. We vouch only for the host (already matched)
+    /// and an https scheme with no embedded credentials; the room code is best-effort. The
+    /// scanned URL carries its own claim/instance, so there's nothing to re-attach here.
+    private static func joinVerbatim(url: String, components: URLComponents, game: Game) -> JoinOutcome {
+        guard components.scheme?.lowercased() == "https", (components.user ?? "").isEmpty else {
+            return .failure(message: String(localized: "That code isn’t a Couch Games room."))
+        }
+        return .success(game: game, roomCode: extractRoomCode(components), joinUrl: url)
+    }
+
+    /// Best-effort room code: the first room-code-shaped token (Base58, exact length) in a
+    /// path segment, else a query value. "" when the URL surfaces none — the join still
+    /// loads; the rejoin card just can't show or liveness-poll the room.
+    private static func extractRoomCode(_ components: URLComponents) -> String {
+        let segments = components.path.split(separator: "/").map(String.init)
+        if let code = segments.first(where: isValidCode) { return code }
+        for item in components.queryItems ?? [] {
+            if let value = item.value, isValidCode(value) { return value }
+        }
+        return ""
+    }
+
+    private static func isValidCode(_ code: String) -> Bool {
+        code.count == CG.roomCodeLength && code.allSatisfy { CG.base58.contains($0) }
+    }
 
     private static func soleLiveGameJoin(games: [Game], roomCode: String,
                                          claim: String?, instance: String?) -> JoinOutcome {
@@ -71,8 +91,7 @@ enum JoinResolver {
     private static func joinAt(base: String, game: Game, roomCode: String,
                                claim: String?, instance: String?) -> JoinOutcome {
         // Validate: exact length and every char in the suite charset (case-sensitive).
-        guard roomCode.count == CG.roomCodeLength,
-              roomCode.allSatisfy({ CG.base58.contains($0) }) else {
+        guard isValidCode(roomCode) else {
             return .failure(message: String(localized: "That code isn’t a Couch Games room."))
         }
 
@@ -86,6 +105,6 @@ enum JoinResolver {
         if let instance, !instance.isEmpty {
             joinUrl += "#" + androidUriEncode(instance)
         }
-        return .success(game: game, roomCode: roomCode, claim: claim, instance: instance, joinUrl: joinUrl)
+        return .success(game: game, roomCode: roomCode, joinUrl: joinUrl)
     }
 }

@@ -10,7 +10,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -19,16 +21,20 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -64,6 +70,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -78,6 +85,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import com.couchgames.controller.data.Favicon
 import com.couchgames.controller.data.Game
 import com.couchgames.controller.data.GamesManifest
 import com.couchgames.controller.data.JoinOutcome
@@ -97,10 +105,8 @@ import com.couchgames.controller.ui.components.JoinButtons
 import com.couchgames.controller.ui.components.MirrorHostSystemBars
 import com.couchgames.controller.ui.components.PlayerChip
 import com.couchgames.controller.ui.components.stableScreenInsets
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
 fun MainScreen(
@@ -122,7 +128,7 @@ fun MainScreen(
   var showCodeEntry by remember { mutableStateOf(false) }
   var codeLoading by remember { mutableStateOf(false) }
   var codeError by remember { mutableStateOf<String?>(null) }
-  var rejoin by remember { mutableStateOf<RejoinTarget?>(null) }
+  var rejoin by remember { mutableStateOf<RecentRoom?>(null) }
   var infoGame by remember { mutableStateOf<Game?>(null) }
 
   // Every successful join funnels through here: remember the room for one-tap
@@ -131,7 +137,7 @@ fun MainScreen(
   fun launchJoin(target: JoinOutcome.Success, p: Profile) {
     haptics.performHapticFeedback(HapticFeedbackType.Confirm)
     showScanner = false
-    RecentRoomStore.save(context, target)
+    RecentRoomStore.remember(target.game, target.joinUrl, target.roomCode)
     onJoin(withProfile(target.joinUrl, p), target.game.name, target.game.hosts)
   }
 
@@ -180,14 +186,18 @@ fun MainScreen(
   // no polling while backgrounded.
   LaunchedEffect(Unit) {
     lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-      val recent = withContext(Dispatchers.IO) { RecentRoomStore.load(context) }
-        ?: return@repeatOnLifecycle
-      val game = games.firstOrNull { it.id == recent.gameId } ?: return@repeatOnLifecycle
+      val recent = RecentRoomStore.current() ?: return@repeatOnLifecycle
+      // No room code (the scanned URL didn't surface one) → we can't liveness-poll, so
+      // surface the card unverified. Tapping a dead room is handled by gameEnded.
+      if (recent.roomCode.isBlank()) {
+        rejoin = recent
+        return@repeatOnLifecycle
+      }
       while (true) {
-        when (RoomDirectory.lookup(recent.roomCode, game.roomRelayBase)) {
-          is RoomLookup.Found -> rejoin = RejoinTarget(recent, game)
+        when (RoomDirectory.lookup(recent.roomCode, recent.game.roomRelayBase)) {
+          is RoomLookup.Found -> rejoin = recent
           RoomLookup.NotFound -> {
-            withContext(Dispatchers.IO) { RecentRoomStore.clear(context) }
+            RecentRoomStore.clear()
             rejoin = null
             return@repeatOnLifecycle
           }
@@ -204,16 +214,23 @@ fun MainScreen(
   // the inset padding — the camera runs edge to edge and pads its own controls.
   var joinCardHeightPx by remember { mutableStateOf(0) }
   Box(modifier.fillMaxSize()) {
+    // Only the horizontal (cutout) inset pads the container. The status bar and nav
+    // bar are applied INSIDE the scroll (top spacer + card bottom inset) so the
+    // catalog scrolls edge to edge UNDER the transparent bars instead of being
+    // clipped in a box below them.
     Box(
       Modifier
         .fillMaxSize()
-        .windowInsetsPadding(stableScreenInsets),
+        .windowInsetsPadding(stableScreenInsets.only(WindowInsetsSides.Horizontal)),
     ) {
       Column(
         Modifier
           .fillMaxSize()
           .verticalScroll(rememberScrollState()),
       ) {
+        // Clears the status bar so the header starts below it, but scrolls away with
+        // the content — posters slide under the transparent bar, not into a hard cut.
+        Spacer(Modifier.windowInsetsTopHeight(stableScreenInsets))
         // Sits OUTSIDE the 16dp content margin (owns its own padding, like the
         // in-game LeaveBar) so the title and name chip align across screens.
         HomeTopBar(profile = profile, onEditProfile = { showProfile = true }, onOpenAbout = onOpenAbout)
@@ -226,15 +243,15 @@ fun MainScreen(
           // A relay-confirmed room springs the rejoin card in; when the room dies it
           // springs back out. Retain the last target so the exit animation still has
           // content to render after `rejoin` clears (mirrors iOS's scale+fade).
-          var lastRejoin by remember { mutableStateOf<RejoinTarget?>(null) }
+          var lastRejoin by remember { mutableStateOf<RecentRoom?>(null) }
           LaunchedEffect(rejoin) { rejoin?.let { lastRejoin = it } }
           AnimatedVisibility(
             visible = rejoin != null,
             enter = fadeIn() + scaleIn(initialScale = 0.96f),
             exit = fadeOut() + scaleOut(targetScale = 0.96f),
           ) {
-            lastRejoin?.let { target ->
-              RejoinCard(target) { resolveAndJoin(target.room.joinUrl) }
+            lastRejoin?.let { room ->
+              RejoinCard(room) { resolveAndJoin(room.joinUrl) }
             }
           }
           GamesSection(games, onOpen = { infoGame = it })
@@ -247,12 +264,27 @@ fun MainScreen(
         onEnterCode = { requireName(AfterName.EnterCode) },
         modifier = Modifier
           .align(Alignment.BottomCenter)
-          // Measured OUTSIDE the margins so the spacer clears card + margins.
+          // Measured OUTSIDE the margins + nav-bar inset so the spacer clears the
+          // whole floating card.
           .onGloballyPositioned { joinCardHeightPx = it.size.height }
+          // The container no longer reserves the nav bar; lift the card above it here.
+          .windowInsetsPadding(stableScreenInsets.only(WindowInsetsSides.Bottom))
           .padding(horizontal = 12.dp)
           .padding(bottom = 12.dp),
       )
     }
+    // Status-bar protection: the window background at 50% alpha, one status-bar tall.
+    // At rest it sits over the same background — a no-op, invisible. When a poster
+    // scrolls under the bar it tints that strip back toward the background, keeping
+    // the theme-colored status icons legible. No icon flipping, no poster-color
+    // assumption. Sits above the catalog but below the full-screen scanner overlay.
+    Box(
+      Modifier
+        .align(Alignment.TopCenter)
+        .fillMaxWidth()
+        .windowInsetsTopHeight(stableScreenInsets)
+        .background(MaterialTheme.colorScheme.background.copy(alpha = 0.5f)),
+    )
     if (showScanner) {
       ScanScreen(
         games = games,
@@ -332,9 +364,6 @@ private sealed interface AfterName {
   data class Join(val target: JoinOutcome.Success) : AfterName
 }
 
-// A relay-confirmed alive room from a previous session.
-private data class RejoinTarget(val room: RecentRoom, val game: Game)
-
 // Home chrome, structurally identical to the in-game LeaveBar so the title and
 // name chip land in the same place across screens (GameHostScreen.kt).
 @OptIn(ExperimentalMaterial3Api::class)
@@ -382,9 +411,12 @@ private fun rememberPressScale(interaction: MutableInteractionSource): Float {
 }
 
 @Composable
-private fun RejoinCard(target: RejoinTarget, onClick: () -> Unit) {
+private fun RejoinCard(room: RecentRoom, onClick: () -> Unit) {
   val interaction = remember { MutableInteractionSource() }
   val scale = rememberPressScale(interaction)
+  // The controller's own page title (captured this session), falling back to the
+  // manifest's curated name until it's captured.
+  val name = room.title ?: room.game.name
   Card(
     onClick = onClick,
     modifier = Modifier
@@ -401,16 +433,54 @@ private fun RejoinCard(target: RejoinTarget, onClick: () -> Unit) {
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-      Icon(Icons.Filled.PlayArrow, contentDescription = null, Modifier.size(28.dp))
+      RejoinIcon(room.favicon)
       Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(stringResource(R.string.rejoin_game, target.game.name), style = MaterialTheme.typography.titleMedium)
         Text(
-          stringResource(R.string.room_code_label, target.room.roomCode),
-          style = MaterialTheme.typography.bodyMedium,
+          name,
+          style = MaterialTheme.typography.titleMedium,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
         )
+        if (room.roomCode.isNotBlank()) {
+          Text(
+            stringResource(R.string.room_code_label, room.roomCode),
+            style = MaterialTheme.typography.bodyMedium,
+          )
+        }
       }
       Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
     }
+  }
+}
+
+// The rejoin card's leading glyph: the game's captured controller favicon on a tile
+// whose shade is chosen from the icon's OWN content — a dark plate under a
+// light/transparent icon, a white plate under a dark one — so it never washes out
+// against the light card or a same-toned plate. Falls back to a play arrow when
+// nothing's been captured this session.
+@Composable
+private fun RejoinIcon(favicon: Favicon?) {
+  val fav = favicon
+  if (fav != null) {
+    val plate = if (fav.contentIsLight) Color(0xFF202024) else Color.White
+    Box(
+      Modifier
+        .size(48.dp)
+        .clip(RoundedCornerShape(12.dp))
+        .background(plate)
+        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp)),
+      contentAlignment = Alignment.Center,
+    ) {
+      // ~10dp of breathing room inside the tile so the icon never touches the edge.
+      Image(
+        fav.image,
+        contentDescription = null,
+        modifier = Modifier.size(28.dp).clip(RoundedCornerShape(8.dp)),
+        contentScale = ContentScale.Fit,
+      )
+    }
+  } else {
+    Icon(Icons.Filled.PlayArrow, contentDescription = null, Modifier.size(34.dp))
   }
 }
 

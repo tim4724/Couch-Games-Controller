@@ -195,17 +195,4 @@ struct Profile: Equatable {
     }
 }
 
-// MARK: - RecentRoom
-
-struct RecentRoom: Equatable {
-    /// Stored WITHOUT cgv/cgName params — re-wrapped with the current name at rejoin time.
-    let joinUrl: String
-    let gameId: String
-    let roomCode: String
-
-    init(joinUrl: String, gameId: String, roomCode: String) {
-        self.joinUrl = joinUrl
-        self.gameId = gameId
-        self.roomCode = roomCode
-    }
-}
+// RecentRoom (and its single-slot in-memory store) live in Stores.swift.

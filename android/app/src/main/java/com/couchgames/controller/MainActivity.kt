@@ -2,6 +2,7 @@ package com.couchgames.controller
 
 import android.content.Intent
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -33,6 +34,14 @@ class MainActivity : ComponentActivity() {
       statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
       navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
     )
+    // enableEdgeToEdge disables the status bar's contrast scrim but leaves the nav
+    // bar's on (isNavigationBarContrastEnforced defaults true) — so in 3-button mode
+    // the nav bar tints as content scrolls under it while the status bar stays clear.
+    // Match them: neither bar draws a scrim, so content shows through both cleanly.
+    // (Our layouts keep the bar edges over dark chrome, so no legibility scrim needed.)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+      window.isNavigationBarContrastEnforced = false
+    }
     setContent {
       CouchGamesTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {

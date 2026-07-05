@@ -108,6 +108,10 @@ struct MainScreen: View {
             }
         }
         .navigationTitle("Couch Games")
+        // "Controller" subtitle under the app name, matching Android's HomeTopBar.
+        // Native subtitle slot is iOS 26+; on earlier releases the bar shows the
+        // title alone (no subtitle affordance existed pre-26).
+        .modifier(HomeNavigationSubtitle())
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             // Exactly ONE glass capsule: the toolbar wraps items in its own glass
@@ -371,6 +375,18 @@ struct MainScreen: View {
 }
 
 // MARK: - Private types
+
+/// Adds the "Controller" navigation subtitle where the OS supports it (iOS 26+).
+/// A modifier rather than an inline `if #available` so the SDK-17 build compiles.
+private struct HomeNavigationSubtitle: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.navigationSubtitle(Text("Controller"))
+        } else {
+            content
+        }
+    }
+}
 
 private enum AfterName {
     case scan

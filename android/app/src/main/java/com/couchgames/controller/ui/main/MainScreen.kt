@@ -75,6 +75,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -117,6 +118,9 @@ fun MainScreen(
   onOpenAbout: () -> Unit = {},
 ) {
   val context = LocalContext.current
+  // Config-aware resources for string lookups in callbacks (context.getString on
+  // LocalContext.current is flagged by lint as not tracking config changes).
+  val resources = LocalResources.current
   val scope = rememberCoroutineScope()
   val haptics = LocalHapticFeedback.current
   val lifecycleOwner = LocalLifecycleOwner.current
@@ -145,7 +149,7 @@ fun MainScreen(
   // rejection buzz, mirroring iOS's error haptic.
   fun fail(messageRes: Int, length: Int = Toast.LENGTH_SHORT) {
     haptics.performHapticFeedback(HapticFeedbackType.Reject)
-    Toast.makeText(context, context.getString(messageRes), length).show()
+    Toast.makeText(context, resources.getString(messageRes), length).show()
   }
 
   fun perform(action: AfterName, p: Profile) {
@@ -339,7 +343,7 @@ fun MainScreen(
             }
             is JoinOutcome.Failure -> {
               haptics.performHapticFeedback(HapticFeedbackType.Reject)
-              codeError = context.getString(outcome.messageRes)
+              codeError = resources.getString(outcome.messageRes)
             }
           }
         }

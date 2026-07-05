@@ -59,4 +59,5 @@
     <string name="game_tinytrack_players">1–4 giocatori</string>
     <string name="game_powder_players">1–4 giocatori</string>
     <string name="play_step_scan">Scansiona il codice della stanza mostrato per giocare.</string>
+    <string name="version_label">Versione %1$s</string>
 </resources>

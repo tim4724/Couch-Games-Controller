@@ -60,4 +60,5 @@
     <string name="game_tinytrack_players">1~4명</string>
     <string name="game_powder_players">1~4명</string>
     <string name="play_step_scan">표시된 방 코드를 스캔해 플레이하세요.</string>
+    <string name="version_label">버전 %1$s</string>
 </resources>

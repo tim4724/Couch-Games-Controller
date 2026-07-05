@@ -60,4 +60,5 @@
     <string name="game_tinytrack_players">1〜4人</string>
     <string name="game_powder_players">1〜4人</string>
     <string name="play_step_scan">表示されたルームコードをスキャンしてプレイ。</string>
+    <string name="version_label">バージョン %1$s</string>
 </resources>

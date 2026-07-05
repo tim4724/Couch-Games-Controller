@@ -67,6 +67,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -108,6 +109,9 @@ fun ScanScreen(
   onClose: () -> Unit,
 ) {
   val context = LocalContext.current
+  // Config-aware resources for string lookups in callbacks (context.getString on
+  // LocalContext.current is flagged by lint as not tracking config changes).
+  val resources = LocalResources.current
   val haptics = LocalHapticFeedback.current
   val view = LocalView.current
 
@@ -167,7 +171,7 @@ fun ScanScreen(
           return
         }
         is JoinOutcome.Failure ->
-          if (newFailure == null && rejected.add(raw)) newFailure = context.getString(r.messageRes)
+          if (newFailure == null && rejected.add(raw)) newFailure = resources.getString(r.messageRes)
       }
     }
     scanError = newFailure ?: return

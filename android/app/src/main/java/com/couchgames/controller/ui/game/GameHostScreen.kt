@@ -121,7 +121,11 @@ fun GameHostScreen(
   }
 }
 
-@SuppressLint("SetJavaScriptEnabled")
+// JavascriptInterface: CouchGamesHostBridge's exposed methods ARE @JavascriptInterface-
+// annotated (see the class below), but lint resolves hostBridge through remember()'s
+// generic return and can't see the annotations, so it false-positives on the
+// addJavascriptInterface call.
+@SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
 @Composable
 private fun GameHostContent(
   joinUrl: String,

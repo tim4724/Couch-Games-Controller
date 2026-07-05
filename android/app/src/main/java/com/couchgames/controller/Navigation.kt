@@ -18,6 +18,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
@@ -37,6 +38,9 @@ fun MainNavigation(deepLink: String? = null, onDeepLinkConsumed: () -> Unit = {}
   val scope = rememberCoroutineScope()
   val snackbarHostState = remember { SnackbarHostState() }
   val context = LocalContext.current
+  // Config-aware resources for string lookups in callbacks (context.getString on
+  // LocalContext.current is flagged by lint as not tracking config changes).
+  val resources = LocalResources.current
 
   // An external App Link routes through MainScreen (which owns the name gate + join).
   // Pop back to Main first so it's the active entry and can handle it.
@@ -106,7 +110,7 @@ fun MainNavigation(deepLink: String? = null, onDeepLinkConsumed: () -> Unit = {}
             // the player didn't choose to leave, so silence would read as a crash.
             onGameEnd = { reason ->
               backStack.removeLastOrNull()
-              scope.launch { snackbarHostState.showSnackbar(context.getString(gameEndMessage(reason))) }
+              scope.launch { snackbarHostState.showSnackbar(resources.getString(gameEndMessage(reason))) }
             },
           )
         }

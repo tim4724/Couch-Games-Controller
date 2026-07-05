@@ -1,5 +1,9 @@
 package com.couchgames.controller
 
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -42,6 +46,15 @@ fun MainNavigation(deepLink: String? = null, onDeepLinkConsumed: () -> Unit = {}
     NavDisplay(
       backStack = backStack,
       onBack = { backStack.removeLastOrNull() },
+      // Nav3's default predictive-back spec scales the outgoing screen to 0.7 with no
+      // fade, so an edge-swipe close looked different from a button/pop close (a plain
+      // fade). Override it to the same crossfade so every back animates identically.
+      predictivePopTransitionSpec = {
+        ContentTransform(
+          fadeIn(animationSpec = tween(700)),
+          fadeOut(animationSpec = tween(700)),
+        )
+      },
       entryProvider = entryProvider {
         entry<Main> {
           MainScreen(

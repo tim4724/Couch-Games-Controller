@@ -9,6 +9,7 @@ struct AboutScreen: View {
     let onOpenImprint: () -> Void
 
     @Environment(\.cgPalette) private var palette
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         ZStack {
@@ -18,6 +19,19 @@ struct AboutScreen: View {
                 Divider()
                 AboutRow(label: "Impressum", action: onOpenImprint)
                 Divider()
+                // The marketing site is a full website, not a legal doc, so it opens
+                // in the system browser rather than the in-app WebDocScreen viewer.
+                AboutRow(label: "couch-games.com") {
+                    if let url = URL(string: CG.websiteURL) { openURL(url) }
+                }
+                Divider()
+
+                Spacer()
+
+                Text("Version \(CG.appVersion)")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .padding(.bottom, 20)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }

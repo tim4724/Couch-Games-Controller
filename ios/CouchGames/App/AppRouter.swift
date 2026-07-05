@@ -148,7 +148,14 @@ struct RootView: View {
                             onOpenImprint: { router.push(.webDoc(WebDocParams(url: CG.imprintURL, title: String(localized: "Impressum")))) }
                         )
                     case .webDoc(let params):
-                        WebDocScreen(url: params.url, title: params.title)
+                        WebDocScreen(
+                            url: params.url,
+                            title: params.title,
+                            onOpenDoc: { destination in
+                                let title = CG.legalTitle(for: URL(string: destination)) ?? params.title
+                                router.push(.webDoc(WebDocParams(url: destination, title: title)))
+                            }
+                        )
                     }
                 }
             }

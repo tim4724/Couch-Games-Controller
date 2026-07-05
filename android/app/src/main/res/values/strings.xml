@@ -69,4 +69,6 @@
     <string name="game_tinytrack_players">1–4 players</string>
     <string name="game_powder_players">1–4 players</string>
     <string name="play_step_scan">Scan the room code it shows to play.</string>
+    <!-- About: app version footer. %1$s = version name (e.g. "1.0"). -->
+    <string name="version_label">Version %1$s</string>
 </resources>

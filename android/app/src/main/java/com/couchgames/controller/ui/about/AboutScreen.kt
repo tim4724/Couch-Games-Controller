@@ -3,6 +3,7 @@ package com.couchgames.controller.ui.about
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -16,7 +17,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.couchgames.controller.BuildConfig
 import com.couchgames.controller.R
 import com.couchgames.controller.ui.components.BackScaffold
 
@@ -31,6 +34,7 @@ fun AboutScreen(
   onOpenPrivacy: () -> Unit,
   onOpenImprint: () -> Unit,
   onOpenLicenses: () -> Unit,
+  onOpenWebsite: () -> Unit,
   onBack: () -> Unit,
 ) {
   BackScaffold(title = stringResource(R.string.about), onBack = onBack) { innerPadding ->
@@ -40,6 +44,18 @@ fun AboutScreen(
       AboutRow(stringResource(R.string.imprint), onOpenImprint)
       HorizontalDivider()
       AboutRow(stringResource(R.string.open_source_licenses), onOpenLicenses)
+      HorizontalDivider()
+      AboutRow("couch-games.com", onOpenWebsite)
+
+      Spacer(Modifier.weight(1f))
+
+      Text(
+        stringResource(R.string.version_label, BuildConfig.VERSION_NAME),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().padding(20.dp),
+      )
     }
   }
 }

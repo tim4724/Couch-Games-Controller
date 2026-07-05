@@ -1,9 +1,10 @@
 package com.couchgames.controller.ui.legal
 
+import android.content.Intent
 import android.view.ViewGroup
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -42,17 +43,21 @@ private val LEGAL_ORIGINS = setOf("https://couch-games.com")
  * deliberately separate from the game-host WebView: there is no navigation
  * allow-list or JS bridge here — these are trusted first-party pages, loaded so
  * the documents stay reachable from within the app.
+ *
+ * Each screen shows exactly one document. Tapping the page's cross-link to the
+ * other doc opens it as its own screen ([onOpenDoc]), so the system back button
+ * returns here — no in-page history to walk.
  */
 @Composable
-fun WebDocScreen(url: String, title: String, onBack: () -> Unit) {
+fun WebDocScreen(
+  url: String,
+  privacyTitle: String,
+  imprintTitle: String,
+  onOpenDoc: (String) -> Unit,
+  onBack: () -> Unit,
+) {
   var loading by remember { mutableStateOf(true) }
-  var webView by remember { mutableStateOf<WebView?>(null) }
-
-  // Follow links within the page (e.g. privacy → imprint) before leaving the screen.
-  BackHandler(enabled = true) {
-    val wv = webView
-    if (wv != null && wv.canGoBack()) wv.goBack() else onBack()
-  }
+  val title = if (LegalLinks.isImprint(url)) imprintTitle else privacyTitle
 
   BackScaffold(title = title, onBack = onBack) { innerPadding ->
     Box(Modifier.fillMaxSize().padding(innerPadding)) {
@@ -83,6 +88,21 @@ fun WebDocScreen(url: String, title: String, onBack: () -> Unit) {
               WebViewCompat.addDocumentStartJavaScript(this, HIDE_HEADING_JS, LEGAL_ORIGINS)
             }
             webViewClient = object : WebViewClient() {
+              override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                val target = request.url.toString()
+                // A tap on the cross-link to the other legal doc opens it as its own
+                // screen, so the system back button returns here. (The initial page
+                // load isn't routed through here.) Everything else — external references
+                // (e.g. the linked data-protection authority), the site's home link, and
+                // non-web schemes like mailto:/tel: (which a WebView can't render and
+                // would show an error page for) — is handed to the system app.
+                if (LegalLinks.isPrivacy(target) || LegalLinks.isImprint(target)) {
+                  onOpenDoc(target)
+                  return true
+                }
+                runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, request.url)) }
+                return true
+              }
               override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
                 loading = true
               }
@@ -92,7 +112,6 @@ fun WebDocScreen(url: String, title: String, onBack: () -> Unit) {
               }
             }
             loadUrl(url)
-            webView = this
           }
         },
       )

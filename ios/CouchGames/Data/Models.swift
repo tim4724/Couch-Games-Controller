@@ -18,6 +18,23 @@ enum CG {
     /// within the app (§5 DDG imprint requirement; GDPR privacy notice).
     static let privacyURL = "https://couch-games.com/privacy"
     static let imprintURL = "https://couch-games.com/imprint"
+    /// Public marketing site. Opened in the system browser from About — a full site,
+    /// not an in-app legal doc.
+    static let websiteURL = "https://couch-games.com"
+
+    /// Marketing version (CFBundleShortVersionString), surfaced read-only in the
+    /// About footer for support/bug reports.
+    static var appVersion: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "" }
+
+    /// The two legal pages cross-link to each other, so the in-app viewer can move
+    /// from one to the other. Matches a loaded URL back to a document title (localized)
+    /// so the nav bar shows the right one as the page changes; `nil` if unrecognized.
+    static func legalTitle(for url: URL?) -> String? {
+        let path = (url?.path ?? "").trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        if path.hasSuffix("imprint") { return String(localized: "Impressum") }
+        if path.hasSuffix("privacy") { return String(localized: "Privacy Policy") }
+        return nil
+    }
 }
 
 // MARK: - Game

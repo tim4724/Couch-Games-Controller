@@ -1,5 +1,7 @@
 package com.couchgames.controller
 
+import android.content.Intent
+import androidx.core.net.toUri
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -68,9 +70,14 @@ fun MainNavigation(deepLink: String? = null, onDeepLinkConsumed: () -> Unit = {}
         }
         entry<About> {
           AboutScreen(
-            onOpenPrivacy = { backStack.add(WebDoc(LegalLinks.PRIVACY_URL, R.string.privacy_policy)) },
-            onOpenImprint = { backStack.add(WebDoc(LegalLinks.IMPRINT_URL, R.string.imprint)) },
+            onOpenPrivacy = { backStack.add(WebDoc(LegalLinks.PRIVACY_URL)) },
+            onOpenImprint = { backStack.add(WebDoc(LegalLinks.IMPRINT_URL)) },
             onOpenLicenses = { backStack.add(Licenses) },
+            // The marketing site is a full website, not a legal doc, so it opens in
+            // the system browser rather than the in-app WebDocScreen viewer.
+            onOpenWebsite = {
+              context.startActivity(Intent(Intent.ACTION_VIEW, LegalLinks.WEBSITE_URL.toUri()))
+            },
             onBack = { backStack.removeLastOrNull() },
           )
         }
@@ -78,9 +85,14 @@ fun MainNavigation(deepLink: String? = null, onDeepLinkConsumed: () -> Unit = {}
           LicensesScreen(onBack = { backStack.removeLastOrNull() })
         }
         entry<WebDoc> { key ->
+          // Both titles are resolved here (re-localizing with the device language); the
+          // screen shows the one matching its URL. A cross-link opens the other doc as
+          // its own entry so the back button returns here.
           WebDocScreen(
             url = key.url,
-            title = stringResource(key.titleRes),
+            privacyTitle = stringResource(R.string.privacy_policy),
+            imprintTitle = stringResource(R.string.imprint),
+            onOpenDoc = { backStack.add(WebDoc(it)) },
             onBack = { backStack.removeLastOrNull() },
           )
         }

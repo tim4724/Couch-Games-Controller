@@ -114,37 +114,21 @@ struct MainScreen: View {
         .modifier(HomeNavigationSubtitle())
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
-            // Exactly ONE glass capsule: the toolbar wraps items in its own glass
-            // container, so the item's shared background is hidden and the glass
-            // button style is the sole container. Regular glass, not prominent —
-            // the chip is not the screen's primary action. Label is .primary
-            // (scheme-adaptive), never the mono tint, which would pin the color
-            // and defeat the glass legibility adaptation over dark poster art.
-            if #available(iOS 26.0, *) {
-                ToolbarItem(placement: .topBarTrailing) {
-                    chipButton(labelColor: nil)
-                        .buttonStyle(.glass)
-                }
-                .sharedBackgroundVisibility(.hidden)
-            } else {
-                // Pre-26 bars always have a legible material background.
-                ToolbarItem(placement: .topBarTrailing) {
-                    chipButton(labelColor: nil)
-                }
+            // The name capsule and the About button are unrelated actions, so they
+            // read as two distinct glass pills rather than one merged container. On
+            // iOS 26 a ToolbarSpacer(.fixed) is what splits the shared glass into two
+            // pills with the system's standard gap — and the system keeps them the
+            // same height (the icon-only About item becomes a circle on its own).
+            // Labels are .primary (scheme-adaptive) so the glass legibility flip works
+            // over poster art.
+            ToolbarItem(placement: .topBarTrailing) {
+                chipButton(labelColor: nil)
             }
-            // About — always visible in the bar. Same glass treatment as the chip:
-            // its own glass container (shared background hidden) so the icon adapts
-            // to the poster art beneath rather than sitting on a fixed tint.
             if #available(iOS 26.0, *) {
-                ToolbarItem(placement: .topBarTrailing) {
-                    aboutButton()
-                        .buttonStyle(.glass)
-                }
-                .sharedBackgroundVisibility(.hidden)
-            } else {
-                ToolbarItem(placement: .topBarTrailing) {
-                    aboutButton()
-                }
+                ToolbarSpacer(.fixed, placement: .topBarTrailing)
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                aboutButton()
             }
         }
         .sensoryFeedback(.success, trigger: successTick)

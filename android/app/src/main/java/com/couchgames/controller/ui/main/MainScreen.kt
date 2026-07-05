@@ -36,7 +36,6 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
@@ -69,7 +68,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -94,6 +93,7 @@ import com.couchgames.controller.data.resolveTypedCode
 import com.couchgames.controller.data.withProfile
 import com.couchgames.controller.R
 import com.couchgames.controller.ui.components.GameArt
+import com.couchgames.controller.ui.components.JoinButtons
 import com.couchgames.controller.ui.components.MirrorHostSystemBars
 import com.couchgames.controller.ui.components.PlayerChip
 import com.couchgames.controller.ui.components.stableScreenInsets
@@ -137,9 +137,9 @@ fun MainScreen(
 
   // Every failure surface — a bad link, a dead room — pairs the toast with a
   // rejection buzz, mirroring iOS's error haptic.
-  fun fail(message: String, length: Int = Toast.LENGTH_SHORT) {
+  fun fail(messageRes: Int, length: Int = Toast.LENGTH_SHORT) {
     haptics.performHapticFeedback(HapticFeedbackType.Reject)
-    Toast.makeText(context, message, length).show()
+    Toast.makeText(context, context.getString(messageRes), length).show()
   }
 
   fun perform(action: AfterName, p: Profile) {
@@ -163,7 +163,7 @@ fun MainScreen(
   fun resolveAndJoin(raw: String) {
     when (val r = JoinResolver.resolve(raw, games)) {
       is JoinOutcome.Success -> requireName(AfterName.Join(r))
-      is JoinOutcome.Failure -> fail(r.message)
+      is JoinOutcome.Failure -> fail(r.messageRes)
     }
   }
 
@@ -267,8 +267,8 @@ fun MainScreen(
     val gating = afterName != null
     ProfileSheet(
       initial = profile,
-      title = if (gating) "Enter your name" else "Your player",
-      cta = if (gating) "Save & continue" else "Save",
+      title = stringResource(if (gating) R.string.enter_your_name else R.string.name),
+      cta = stringResource(if (gating) R.string.save_and_continue else R.string.save),
       onDismiss = {
         showProfile = false
         afterName = null
@@ -307,7 +307,7 @@ fun MainScreen(
             }
             is JoinOutcome.Failure -> {
               haptics.performHapticFeedback(HapticFeedbackType.Reject)
-              codeError = outcome.message
+              codeError = context.getString(outcome.messageRes)
             }
           }
         }
@@ -316,7 +316,12 @@ fun MainScreen(
   }
 
   infoGame?.let { game ->
-    GameInfoSheet(game = game, onDismiss = { infoGame = null })
+    GameInfoSheet(
+      game = game,
+      onDismiss = { infoGame = null },
+      onScan = { infoGame = null; requireName(AfterName.Scan) },
+      onEnterCode = { infoGame = null; requireName(AfterName.EnterCode) },
+    )
   }
 }
 
@@ -339,12 +344,12 @@ private fun HomeTopBar(profile: Profile, onEditProfile: () -> Unit, onOpenAbout:
     title = {
       Column {
         Text(
-          "Couch Games",
+          stringResource(R.string.app_name),
           style = MaterialTheme.typography.titleLarge,
           fontWeight = FontWeight.SemiBold,
         )
         Text(
-          "Controller",
+          stringResource(R.string.home_subtitle),
           style = MaterialTheme.typography.labelMedium,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -353,7 +358,7 @@ private fun HomeTopBar(profile: Profile, onEditProfile: () -> Unit, onOpenAbout:
     actions = {
       PlayerChip(name = profile.name, onClick = onEditProfile)
       IconButton(onClick = onOpenAbout) {
-        Icon(Icons.Outlined.Info, contentDescription = "About")
+        Icon(Icons.Outlined.Info, contentDescription = stringResource(R.string.about))
       }
       Spacer(Modifier.width(8.dp))
     },
@@ -398,9 +403,9 @@ private fun RejoinCard(target: RejoinTarget, onClick: () -> Unit) {
     ) {
       Icon(Icons.Filled.PlayArrow, contentDescription = null, Modifier.size(28.dp))
       Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text("Rejoin ${target.game.name}", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.rejoin_game, target.game.name), style = MaterialTheme.typography.titleMedium)
         Text(
-          "Room ${target.room.roomCode}",
+          stringResource(R.string.room_code_label, target.room.roomCode),
           style = MaterialTheme.typography.bodyMedium,
         )
       }
@@ -447,13 +452,6 @@ private fun GameCard(game: Game, onOpen: (Game) -> Unit) {
       ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
           Text(game.name, style = MaterialTheme.typography.titleMedium, color = Color.White)
-          Text(
-            game.tagline,
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.82f),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-          )
         }
         PosterStatusChip(game)
       }
@@ -471,7 +469,7 @@ private fun PosterStatusChip(game: Game) {
     else game.accentColor.copy(alpha = 0.32f).compositeOver(Color.Black.copy(alpha = 0.55f))
   val fg = if (game.isLive) Color.Black.copy(alpha = 0.85f) else Color.White
   Text(
-    if (game.isLive) "Live" else "Coming soon",
+    stringResource(if (game.isLive) R.string.status_live else R.string.status_coming_soon),
     style = MaterialTheme.typography.labelMedium,
     color = fg,
     modifier = Modifier
@@ -503,25 +501,22 @@ private fun JoinCard(
       Modifier.fillMaxWidth().padding(16.dp),
       verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-      Text("Join", style = MaterialTheme.typography.titleLarge)
+      Text(stringResource(R.string.join_title), style = MaterialTheme.typography.titleLarge)
+      // The localized template positions the host; the host itself gets the
+      // semibold-accent span wherever the language puts it.
+      val template = stringResource(R.string.join_open_host)
       Text(
         buildAnnotatedString {
-          append("Open ")
+          val at = template.indexOf("%1\$s")
+          append(template.substring(0, at))
           withStyle(
             SpanStyle(fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary),
           ) { append(host) }
-          append(" on your TV or laptop.")
+          append(template.substring(at + 4))
         },
         style = MaterialTheme.typography.bodyLarge,
       )
-      Button(onClick = onScan, modifier = Modifier.fillMaxWidth().height(56.dp)) {
-        Icon(painterResource(R.drawable.ic_qr_scan), contentDescription = null, Modifier.size(22.dp))
-        Spacer(Modifier.width(10.dp))
-        Text("Scan code", style = MaterialTheme.typography.titleMedium)
-      }
-      FilledTonalButton(onClick = onEnterCode, modifier = Modifier.fillMaxWidth().height(56.dp)) {
-        Text("Enter code manually", style = MaterialTheme.typography.titleMedium)
-      }
+      JoinButtons(onScan = onScan, onEnterCode = onEnterCode)
     }
   }
 }
@@ -538,13 +533,13 @@ private fun CodeEntryDialog(
   var code by remember { mutableStateOf("") }
   AlertDialog(
     onDismissRequest = onDismiss,
-    title = { Text("Enter room code") },
+    title = { Text(stringResource(R.string.enter_room_code)) },
     text = {
       MirrorHostSystemBars()
       OutlinedTextField(
         value = code,
         onValueChange = { if (it.length <= 16) code = it },
-        placeholder = { Text("e.g. A3KX9p") },
+        placeholder = { Text(stringResource(R.string.code_placeholder)) },
         singleLine = true,
         isError = error != null,
         supportingText = { if (error != null) Text(error) },
@@ -553,11 +548,11 @@ private fun CodeEntryDialog(
     },
     confirmButton = {
       TextButton(onClick = { onSubmit(code) }, enabled = code.isNotBlank() && !loading) {
-        Text(if (loading) "Joining…" else "Join")
+        Text(stringResource(if (loading) R.string.joining else R.string.join))
       }
     },
     dismissButton = {
-      TextButton(onClick = onDismiss, enabled = !loading) { Text("Cancel") }
+      TextButton(onClick = onDismiss, enabled = !loading) { Text(stringResource(R.string.cancel)) }
     },
   )
 }

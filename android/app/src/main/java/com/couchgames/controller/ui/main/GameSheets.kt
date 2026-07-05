@@ -20,15 +20,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.couchgames.controller.data.Game
 import com.couchgames.controller.ui.components.AppSheet
+import com.couchgames.controller.ui.components.GameArt
+import com.couchgames.controller.ui.components.JoinButtons
+import com.couchgames.controller.ui.components.PlaySteps
 import com.couchgames.controller.ui.components.StatusLabel
 
 /**
- * Pure game info — name, gameplay loop, tagline, players. Joining lives on the
- * home's Join card; no static cover art either (the sheet opens right over the
- * card that already shows it), but a gameplay video adds motion the card doesn't have.
+ * Pure game info — name, media, players. A live game shows its muted gameplay
+ * loop; a not-yet-live game (no video) shows its cover art instead. Joining
+ * lives on the home's Join card.
  */
 @Composable
-fun GameInfoSheet(game: Game, onDismiss: () -> Unit) {
+fun GameInfoSheet(
+  game: Game,
+  onDismiss: () -> Unit,
+  onScan: () -> Unit,
+  onEnterCode: () -> Unit,
+) {
   AppSheet(onDismiss = onDismiss) {
     Column(
       Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 28.dp),
@@ -41,23 +49,17 @@ fun GameInfoSheet(game: Game, onDismiss: () -> Unit) {
         Text(game.name, style = MaterialTheme.typography.headlineSmall)
         StatusLabel(game)
       }
-      game.video?.let { GameplayLoop(it) }
-      Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-          game.tagline,
-          style = MaterialTheme.typography.bodyLarge,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        game.players?.let {
-          Text(it, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-        }
+      if (game.video != null) {
+        GameplayLoop(game.video)
+      } else {
+        GameArt(game, Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(MaterialTheme.shapes.large))
       }
-      if (!game.isLive) {
-        Text(
-          game.comingSoonNote ?: "Coming soon to Couch Games.",
-          style = MaterialTheme.typography.bodyLarge,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+      game.players?.let {
+        Text(it, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+      }
+      if (game.isLive) {
+        PlaySteps(game)
+        JoinButtons(onScan = onScan, onEnterCode = onEnterCode)
       }
     }
   }

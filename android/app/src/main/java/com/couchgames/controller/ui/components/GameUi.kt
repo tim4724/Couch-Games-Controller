@@ -5,15 +5,21 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -28,10 +34,18 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import com.couchgames.controller.R
 import com.couchgames.controller.data.Game
+import com.couchgames.controller.data.LAUNCHER_HOST
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -46,7 +60,7 @@ fun PlayerChip(name: String, onClick: () -> Unit, accented: Boolean = false) {
     modifier = Modifier.height(40.dp),
     label = {
       Text(
-        name.ifBlank { "Set name" },
+        name.ifBlank { stringResource(R.string.set_name) },
         style = MaterialTheme.typography.bodyLarge,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
@@ -116,16 +130,57 @@ fun StepRow(n: Int, text: AnnotatedString) {
     horizontalArrangement = Arrangement.spacedBy(12.dp),
   ) {
     Box(
-      Modifier.size(28.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
+      // Solid primary, not primaryContainer — the pale container tint is nearly
+      // invisible against the sheet's surface in light mode.
+      Modifier.size(28.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
       contentAlignment = Alignment.Center,
     ) {
       Text(
         "$n",
         style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.onPrimaryContainer,
+        color = MaterialTheme.colorScheme.onPrimary,
       )
     }
     Text(text, style = MaterialTheme.typography.bodyLarge)
+  }
+}
+
+/**
+ * The two-step "open on your TV, then scan" how-to for a live game's info sheet —
+ * the app is the controller, so a first-timer who taps the card learns they need
+ * the game running on a big screen first.
+ */
+@Composable
+fun PlaySteps(game: Game) {
+  val host = game.displayHost ?: LAUNCHER_HOST
+  val template = stringResource(R.string.join_open_host)
+  Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    StepRow(
+      1,
+      buildAnnotatedString {
+        val at = template.indexOf("%1\$s")
+        append(template.substring(0, at))
+        // The host gets the game's own brand accent, wherever the language puts it.
+        withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, color = game.accentColor)) {
+          append(host)
+        }
+        append(template.substring(at + 4))
+      },
+    )
+    StepRow(2, AnnotatedString(stringResource(R.string.play_step_scan)))
+  }
+}
+
+/** The two join actions — shared by the home Join card and a live game's info sheet. */
+@Composable
+fun JoinButtons(onScan: () -> Unit, onEnterCode: () -> Unit) {
+  Button(onClick = onScan, modifier = Modifier.fillMaxWidth().height(56.dp)) {
+    Icon(painterResource(R.drawable.ic_qr_scan), contentDescription = null, Modifier.size(22.dp))
+    Spacer(Modifier.width(10.dp))
+    Text(stringResource(R.string.scan_code), style = MaterialTheme.typography.titleMedium)
+  }
+  FilledTonalButton(onClick = onEnterCode, modifier = Modifier.fillMaxWidth().height(56.dp)) {
+    Text(stringResource(R.string.enter_code_manually), style = MaterialTheme.typography.titleMedium)
   }
 }
 
@@ -134,11 +189,11 @@ fun StatusLabel(game: Game) {
   if (game.isLive) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
       Box(Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
-      Text("Live", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+      Text(stringResource(R.string.status_live), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
     }
   } else {
     Text(
-      "Coming soon",
+      stringResource(R.string.status_coming_soon),
       style = MaterialTheme.typography.labelLarge,
       color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

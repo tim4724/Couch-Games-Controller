@@ -40,6 +40,8 @@ struct MainScreen: View {
     @State private var scanRequest: ScanRequest? = nil
     @State private var rejoin: RejoinTarget? = nil
     @State private var infoGame: Game? = nil
+    // A scan/enter action tapped inside the info sheet, run once it dismisses.
+    @State private var pendingSheetAction: AfterName? = nil
     @State private var joinCardHeight: CGFloat = 0
     // Haptic triggers (any change fires the paired sensoryFeedback).
     @State private var successTick = 0
@@ -157,7 +159,7 @@ struct MainScreen: View {
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
             Button("Cancel", role: .cancel) { codeError = nil }
-            Button("Join") { submitCode(codeText) }
+            Button("Play") { submitCode(codeText) }
                 .disabled(codeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         } message: {
             if let codeError {
@@ -181,7 +183,7 @@ struct MainScreen: View {
                     }
                 case .failure(let message):
                     errorTick += 1
-                    messages.showToast("Scanner unavailable: \(message)", long: true)
+                    messages.showToast(String(localized: "Scanner unavailable: \(message)"), long: true)
                 case .cancelled:
                     break
                 }
@@ -190,8 +192,8 @@ struct MainScreen: View {
         .appSheet(item: $profileRequest, onDismiss: { afterName = nil }) { request in
             ProfileSheet(
                 initial: request.profile,
-                title: request.gated ? "Enter your name" : "Your player",
-                cta: request.gated ? "Save & continue" : "Save",
+                title: String(localized: request.gated ? "Enter your name" : "Name"),
+                cta: String(localized: request.gated ? "Save & continue" : "Save"),
                 onSave: { p in
                     ProfileStore.save(p)
                     profile = p
@@ -206,8 +208,19 @@ struct MainScreen: View {
                 }
             )
         }
-        .appSheet(item: $infoGame) { game in
-            GameInfoSheet(game: game)
+        .appSheet(item: $infoGame, onDismiss: {
+            // Fire the funnel only after the sheet is fully gone — presenting the
+            // scanner/alert mid-dismiss would be dropped by UIKit.
+            if let action = pendingSheetAction {
+                pendingSheetAction = nil
+                requireName(action)
+            }
+        }) { game in
+            GameInfoSheet(
+                game: game,
+                onScan: { pendingSheetAction = .scan; infoGame = nil },
+                onEnterCode: { pendingSheetAction = .enterCode; infoGame = nil }
+            )
         }
     }
 
@@ -219,7 +232,7 @@ struct MainScreen: View {
 
     private var profileDisplayName: String {
         let trimmed = profile.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "Set name" : trimmed
+        return trimmed.isEmpty ? String(localized: "Set name") : trimmed
     }
 
     private func chipButton(labelColor: Color?) -> some View {
@@ -427,10 +440,6 @@ private struct GameCard: View {
                         Text(game.name)
                             .font(.cgTitleMedium)
                             .foregroundStyle(.white)
-                        Text(game.tagline)
-                            .font(.cgBodySmall)
-                            .foregroundStyle(.white.opacity(0.82))
-                            .lineLimit(1)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -481,40 +490,29 @@ private struct JoinCard: View {
 
     @Environment(\.cgPalette) private var palette
 
+    private var openHostText: Text {
+        let template = String(localized: "Open %@ on your TV or laptop.")
+        let parts = template.components(separatedBy: "%@")
+        return Text(parts.first ?? "")
+            + Text(host).fontWeight(.semibold)
+            + Text(parts.count > 1 ? parts[1] : "")
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Join")
+                Text("Play")
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(palette.onSurface)
 
-                (Text("Open ")
-                    + Text(host).fontWeight(.semibold)
-                    + Text(" on your TV or laptop."))
+                // The localized template positions the host; the host itself gets
+                // the semibold run wherever the language puts it.
+                openHostText
                     .font(.cgBodyMedium)
                     .foregroundStyle(.secondary)
             }
 
-            VStack(spacing: 10) {
-                Button(action: onScan) {
-                    Label("Scan code", systemImage: "qrcode.viewfinder")
-                        .font(.cgTitleMedium)
-                        .foregroundStyle(palette.onPrimary)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.roundedRectangle(radius: 14))
-                .controlSize(.large)
-
-                Button(action: onEnterCode) {
-                    Text("Enter code manually")
-                        .font(.cgTitleMedium)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.roundedRectangle(radius: 14))
-                .controlSize(.large)
-            }
+            JoinButtons(onScan: onScan, onEnterCode: onEnterCode)
         }
         .padding(20)
         .frame(maxWidth: .infinity)

@@ -5,11 +5,15 @@ import AVFoundation
 
 struct GameInfoSheet: View {
     let game: Game
+    let onScan: () -> Void
+    let onEnterCode: () -> Void
 
     @Environment(\.cgPalette) private var palette
 
-    init(game: Game) {
+    init(game: Game, onScan: @escaping () -> Void, onEnterCode: @escaping () -> Void) {
         self.game = game
+        self.onScan = onScan
+        self.onEnterCode = onEnterCode
     }
 
     var body: some View {
@@ -21,36 +25,56 @@ struct GameInfoSheet: View {
                 StatusLabel(game: game)
             }
 
-            if let video = game.video {
-                GameplayLoopView(videoName: video)
-                    .aspectRatio(16.0 / 9.0, contentMode: .fit)
-                    .frame(maxWidth: .infinity)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(game.tagline)
-                    .font(.cgBodyLarge)
-                    .foregroundStyle(palette.onSurfaceVariant)
-                    .fixedSize(horizontal: false, vertical: true)
-                if let players = game.players {
-                    Text(players)
-                        .font(.cgTitleMedium)
-                        .foregroundStyle(palette.primary)
+            // A live game shows its muted gameplay loop; a not-yet-live game
+            // (no video) shows its cover art instead.
+            Group {
+                if let video = game.video {
+                    GameplayLoopView(videoName: video)
+                } else {
+                    GameArt(game: game)
                 }
             }
+            .aspectRatio(16.0 / 9.0, contentMode: .fit)
+            .frame(maxWidth: .infinity)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
 
-            if !game.isLive {
-                Text(game.comingSoonNote ?? "Coming soon to Couch Games.")
-                    .font(.cgBodyLarge)
-                    .foregroundStyle(palette.onSurfaceVariant)
-                    .fixedSize(horizontal: false, vertical: true)
+            if let players = game.players {
+                Text(players)
+                    .font(.cgTitleMedium)
+                    .foregroundStyle(palette.primary)
+            }
+
+            // The app is the controller, so a first-timer who taps the card
+            // learns they need the game running on a big screen first — then can
+            // act right here.
+            if game.isLive {
+                VStack(alignment: .leading, spacing: 12) {
+                    StepRow(number: 1, text: openStepText)
+                    StepRow(number: 2, text: AttributedString(
+                        String(localized: "Scan the room code it shows to play.")))
+                }
+                JoinButtons(onScan: onScan, onEnterCode: onEnterCode)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 20)
         .padding(.top, 24)
         .padding(.bottom, 28)
+    }
+
+    // Step 1 with the game's host given the semibold-accent run, wherever the
+    // localized template places it.
+    private var openStepText: AttributedString {
+        let host = game.displayHost ?? CG.launcherHost
+        let template = String(localized: "Open %@ on your TV or laptop.")
+        let parts = template.components(separatedBy: "%@")
+        var result = AttributedString(parts.first ?? "")
+        var hostRun = AttributedString(host)
+        hostRun.font = .cgBodyLarge.weight(.semibold)
+        hostRun.foregroundColor = game.accentColor
+        result += hostRun
+        if parts.count > 1 { result += AttributedString(parts[1]) }
+        return result
     }
 }
 

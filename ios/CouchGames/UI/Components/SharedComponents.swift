@@ -36,7 +36,7 @@ struct PlayerChip: View {
     }
 
     private var displayName: String {
-        name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Set name" : name
+        name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? String(localized: "Set name") : name
     }
 }
 
@@ -155,7 +155,7 @@ struct GameArt: View {
 
 // MARK: - StepRow
 
-/// Numbered instruction row: 28pt primaryContainer circle + attributed body text.
+/// Numbered instruction row: 28pt solid-primary circle + attributed body text.
 struct StepRow: View {
     let number: Int
     let text: AttributedString
@@ -170,16 +170,51 @@ struct StepRow: View {
     var body: some View {
         HStack(spacing: 12) {
             ZStack {
+                // Solid primary, not primaryContainer — the pale container tint is
+                // nearly invisible against the sheet's surface in light mode.
                 Circle()
-                    .fill(palette.primaryContainer)
+                    .fill(palette.primary)
                     .frame(width: 28, height: 28)
                 Text("\(number)")
                     .font(.cgLabelLarge)
-                    .foregroundStyle(palette.onPrimaryContainer)
+                    .foregroundStyle(palette.onPrimary)
             }
             Text(text)
                 .font(.cgBodyLarge)
                 .foregroundStyle(palette.onSurface)
+        }
+    }
+}
+
+// MARK: - JoinButtons
+
+/// The two join actions — shared by the home Join card and a live game's info sheet.
+struct JoinButtons: View {
+    let onScan: () -> Void
+    let onEnterCode: () -> Void
+
+    @Environment(\.cgPalette) private var palette
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Button(action: onScan) {
+                Label("Scan code", systemImage: "qrcode.viewfinder")
+                    .font(.cgTitleMedium)
+                    .foregroundStyle(palette.onPrimary)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .buttonBorderShape(.roundedRectangle(radius: 14))
+            .controlSize(.large)
+
+            Button(action: onEnterCode) {
+                Text("Enter code manually")
+                    .font(.cgTitleMedium)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.roundedRectangle(radius: 14))
+            .controlSize(.large)
         }
     }
 }

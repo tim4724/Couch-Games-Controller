@@ -18,5 +18,6 @@ android/captures/
 
 # iOS — CouchGames.xcodeproj is generated (cd ios && xcodegen generate)
 ios/CouchGames.xcodeproj
+ios/build/
 ios/DerivedData/
 xcuserdata/

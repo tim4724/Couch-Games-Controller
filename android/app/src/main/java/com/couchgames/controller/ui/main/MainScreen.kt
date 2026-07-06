@@ -81,11 +81,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -107,6 +104,7 @@ import com.couchgames.controller.data.withProfile
 import com.couchgames.controller.R
 import com.couchgames.controller.ui.components.GameArt
 import com.couchgames.controller.ui.components.JoinButtons
+import com.couchgames.controller.ui.components.annotatedHostLine
 import com.couchgames.controller.ui.components.MirrorHostSystemBars
 import com.couchgames.controller.ui.components.PlayerChip
 import com.couchgames.controller.ui.components.stableScreenInsets
@@ -531,9 +529,8 @@ private fun RejoinCard(room: RecentRoom, onClick: () -> Unit) {
 // nothing's been captured this session.
 @Composable
 private fun RejoinIcon(favicon: Favicon?) {
-  val fav = favicon
-  if (fav != null) {
-    val plate = if (fav.contentIsLight) Color(0xFF202024) else Color.White
+  if (favicon != null) {
+    val plate = if (favicon.contentIsLight) Color(0xFF202024) else Color.White
     Box(
       Modifier
         .size(48.dp)
@@ -544,7 +541,7 @@ private fun RejoinIcon(favicon: Favicon?) {
     ) {
       // ~10dp of breathing room inside the tile so the icon never touches the edge.
       Image(
-        fav.image,
+        favicon.image,
         contentDescription = null,
         modifier = Modifier.size(28.dp).clip(RoundedCornerShape(8.dp)),
         contentScale = ContentScale.Fit,
@@ -591,9 +588,12 @@ private fun GameCard(game: Game, onOpen: (Game) -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
       ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-          Text(game.name, style = MaterialTheme.typography.titleMedium, color = Color.White)
-        }
+        Text(
+          game.name,
+          style = MaterialTheme.typography.titleMedium,
+          color = Color.White,
+          modifier = Modifier.weight(1f),
+        )
         PosterStatusChip(game)
       }
     }
@@ -643,18 +643,8 @@ private fun JoinCard(
       verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
       Text(stringResource(R.string.join_title), style = MaterialTheme.typography.titleLarge)
-      // The localized template positions the host; the host itself gets the
-      // semibold-accent span wherever the language puts it.
-      val template = stringResource(R.string.join_open_host)
       Text(
-        buildAnnotatedString {
-          val at = template.indexOf("%1\$s")
-          append(template.substring(0, at))
-          withStyle(
-            SpanStyle(fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary),
-          ) { append(host) }
-          append(template.substring(at + 4))
-        },
+        annotatedHostLine(stringResource(R.string.join_open_host), host, MaterialTheme.colorScheme.primary),
         style = MaterialTheme.typography.bodyLarge,
       )
       JoinButtons(onScan = onScan, onEnterCode = onEnterCode)

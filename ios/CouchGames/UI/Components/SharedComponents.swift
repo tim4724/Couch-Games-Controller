@@ -253,8 +253,6 @@ struct StatusLabel: View {
 
 /// Card press micro-interaction: spring scale to 0.97 while pressed.
 struct PressableCardButtonStyle: ButtonStyle {
-    init() {}
-
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.97 : 1.0)

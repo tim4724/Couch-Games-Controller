@@ -13,6 +13,7 @@ struct GameHostScreen: View {
     let onLeave: () -> Void
     let onGameEnd: (String?) -> Void
 
+    // Explicit: the synthesized memberwise init would be private (private @State below).
     init(joinUrl: String, title: String, allowedHosts: [String],
          onLeave: @escaping () -> Void, onGameEnd: @escaping (String?) -> Void) {
         self.joinUrl = joinUrl
@@ -331,34 +332,10 @@ private extension CGPalette {
     /// everything on the bar flips together. The accented chip keeps reading
     /// `primary` — the game accent — untouched, matching Android.
     func flippedForBar(_ content: Color) -> CGPalette {
-        CGPalette(
-            primary: primary,
-            onPrimary: onPrimary,
-            primaryContainer: primaryContainer,
-            onPrimaryContainer: onPrimaryContainer,
-            secondary: secondary,
-            onSecondary: onSecondary,
-            secondaryContainer: secondaryContainer,
-            onSecondaryContainer: onSecondaryContainer,
-            background: background,
-            onBackground: onBackground,
-            surface: surface,
-            onSurface: content,
-            surfaceVariant: surfaceVariant,
-            onSurfaceVariant: content,
-            outline: content.opacity(0.5),
-            outlineVariant: outlineVariant,
-            surfaceContainerLowest: surfaceContainerLowest,
-            surfaceContainerLow: surfaceContainerLow,
-            surfaceContainer: surfaceContainer,
-            surfaceContainerHigh: surfaceContainerHigh,
-            surfaceContainerHighest: surfaceContainerHighest,
-            surfaceBright: surfaceBright,
-            error: error,
-            onError: onError,
-            inverseSurface: inverseSurface,
-            inverseOnSurface: inverseOnSurface,
-            scrim: scrim
-        )
+        var p = self
+        p.onSurface = content
+        p.onSurfaceVariant = content
+        p.outline = content.opacity(0.5)
+        return p
     }
 }

@@ -131,7 +131,7 @@ struct MainScreen: View {
             // Labels are .primary (scheme-adaptive) so the glass legibility flip works
             // over poster art.
             ToolbarItem(placement: .topBarTrailing) {
-                chipButton(labelColor: nil)
+                chipButton()
             }
             if #available(iOS 26.0, *) {
                 ToolbarSpacer(.fixed, placement: .topBarTrailing)
@@ -238,7 +238,7 @@ struct MainScreen: View {
         return trimmed.isEmpty ? String(localized: "Set name") : trimmed
     }
 
-    private func chipButton(labelColor: Color?) -> some View {
+    private func chipButton() -> some View {
         Button {
             profileRequest = ProfileSheetRequest(gated: false, profile: profile)
         } label: {
@@ -249,7 +249,8 @@ struct MainScreen: View {
                     .font(.cgLabelLarge)
                     .lineLimit(1)
             }
-            .foregroundStyle(labelColor ?? Color.primary)
+            // .primary is scheme-adaptive, so the glass legibility flip works over posters.
+            .foregroundStyle(Color.primary)
         }
     }
 

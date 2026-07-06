@@ -8,12 +8,6 @@ struct GameHostParams: Hashable {
     let joinUrl: String
     let title: String
     let allowedHosts: [String]
-
-    init(joinUrl: String, title: String, allowedHosts: [String]) {
-        self.joinUrl = joinUrl
-        self.title = title
-        self.allowedHosts = allowedHosts
-    }
 }
 
 struct WebDocParams: Hashable {
@@ -34,8 +28,6 @@ enum Route: Hashable {
     var path: [Route] = []
     var pendingDeepLink: String? = nil
     let messages = MessageCenter()
-
-    init() {}
 
     func handleIncomingURL(_ url: URL) {
         // Deep link always lands on Main; MainScreen owns the resolve + name gate.
@@ -81,8 +73,6 @@ struct ToastItem: Identifiable, Equatable {
 
     @ObservationIgnored private var toastTask: Task<Void, Never>? = nil
     @ObservationIgnored private var gameEndTask: Task<Void, Never>? = nil
-
-    init() {}
 
     func showToast(_ text: String, long: Bool = false) {
         toastTask?.cancel()

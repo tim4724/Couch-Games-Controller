@@ -19,13 +19,15 @@ extension Color {
 // MARK: - Palette
 
 /// MONO graphite chrome palette (Material 3 roles, pre-baked hex — never re-derive lerps).
+/// Members are `var` only so the copy helpers can mutate a copy; `.light`/`.dark` are the
+/// sole instances handed out.
 struct CGPalette: Equatable {
-    let primary, onPrimary, primaryContainer, onPrimaryContainer: Color
-    let secondary, onSecondary, secondaryContainer, onSecondaryContainer: Color
-    let background, onBackground, surface, onSurface: Color
-    let surfaceVariant, onSurfaceVariant, outline, outlineVariant: Color
-    let surfaceContainerLowest, surfaceContainerLow, surfaceContainer, surfaceContainerHigh, surfaceContainerHighest, surfaceBright: Color
-    let error, onError, inverseSurface, inverseOnSurface, scrim: Color
+    var primary, onPrimary, primaryContainer, onPrimaryContainer: Color
+    var secondary, onSecondary, secondaryContainer, onSecondaryContainer: Color
+    var background, onBackground, surface, onSurface: Color
+    var surfaceVariant, onSurfaceVariant, outline, outlineVariant: Color
+    var surfaceContainerLowest, surfaceContainerLow, surfaceContainer, surfaceContainerHigh, surfaceContainerHighest, surfaceBright: Color
+    var error, onError, inverseSurface, inverseOnSurface, scrim: Color
 
     static let light = CGPalette(
         primary: Color(cgHex: 0x202024),
@@ -89,35 +91,10 @@ struct CGPalette: Equatable {
 
     /// Copy with primary = accent, onPrimary = contentColorOn(accent). (Game-host accent remap.)
     func withAccent(_ accent: Color) -> CGPalette {
-        CGPalette(
-            primary: accent,
-            onPrimary: contentColorOn(accent),
-            primaryContainer: primaryContainer,
-            onPrimaryContainer: onPrimaryContainer,
-            secondary: secondary,
-            onSecondary: onSecondary,
-            secondaryContainer: secondaryContainer,
-            onSecondaryContainer: onSecondaryContainer,
-            background: background,
-            onBackground: onBackground,
-            surface: surface,
-            onSurface: onSurface,
-            surfaceVariant: surfaceVariant,
-            onSurfaceVariant: onSurfaceVariant,
-            outline: outline,
-            outlineVariant: outlineVariant,
-            surfaceContainerLowest: surfaceContainerLowest,
-            surfaceContainerLow: surfaceContainerLow,
-            surfaceContainer: surfaceContainer,
-            surfaceContainerHigh: surfaceContainerHigh,
-            surfaceContainerHighest: surfaceContainerHighest,
-            surfaceBright: surfaceBright,
-            error: error,
-            onError: onError,
-            inverseSurface: inverseSurface,
-            inverseOnSurface: inverseOnSurface,
-            scrim: scrim
-        )
+        var p = self
+        p.primary = accent
+        p.onPrimary = contentColorOn(accent)
+        return p
     }
 }
 

@@ -8,11 +8,6 @@ import Foundation
 struct PageTheme: Equatable {
     var bar: Color? = nil
     var accent: Color? = nil
-
-    init(bar: Color? = nil, accent: Color? = nil) {
-        self.bar = bar
-        self.accent = accent
-    }
 }
 
 /// Bridge input is untrusted page data: strict shape, hard length cap, fallback on anything odd.

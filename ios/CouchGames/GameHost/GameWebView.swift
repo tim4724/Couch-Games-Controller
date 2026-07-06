@@ -8,13 +8,6 @@ struct SafeZone: Equatable {
     var left: Int = 0
     var right: Int = 0
     var bottom: Int = 0
-
-    init(top: Int = 0, left: Int = 0, right: Int = 0, bottom: Int = 0) {
-        self.top = top
-        self.left = left
-        self.right = right
-        self.bottom = bottom
-    }
 }
 
 /// WKWebView whose safeAreaInsets are synthetic, so viewport-fit=cover pages see

@@ -227,10 +227,6 @@ struct Profile: Equatable {
 
     /// Non-blank after trimming whitespace.
     var isSet: Bool { !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-
-    init(name: String = "") {
-        self.name = name
-    }
 }
 
 // MARK: - FunnyName

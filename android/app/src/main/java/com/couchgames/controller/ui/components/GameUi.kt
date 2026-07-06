@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -122,9 +123,21 @@ fun GameArt(game: Game, modifier: Modifier = Modifier) {
   }
 }
 
-/** Numbered instruction row — the home's how-to and the game sheet share it. */
+/**
+ * The "Open <host> on your TV…" line: the localized template positions the host,
+ * and the host gets a semibold accent span wherever the language puts it.
+ */
+fun annotatedHostLine(template: String, host: String, hostColor: Color): AnnotatedString =
+  buildAnnotatedString {
+    val at = template.indexOf("%1\$s")
+    append(template.substring(0, at))
+    withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, color = hostColor)) { append(host) }
+    append(template.substring(at + 4))
+  }
+
+/** Numbered instruction row. */
 @Composable
-fun StepRow(n: Int, text: AnnotatedString) {
+private fun StepRow(n: Int, text: AnnotatedString) {
   Row(
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -153,20 +166,9 @@ fun StepRow(n: Int, text: AnnotatedString) {
 @Composable
 fun PlaySteps(game: Game) {
   val host = game.displayHost ?: LAUNCHER_HOST
-  val template = stringResource(R.string.join_open_host)
   Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-    StepRow(
-      1,
-      buildAnnotatedString {
-        val at = template.indexOf("%1\$s")
-        append(template.substring(0, at))
-        // The host gets the game's own brand accent, wherever the language puts it.
-        withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, color = game.accentColor)) {
-          append(host)
-        }
-        append(template.substring(at + 4))
-      },
-    )
+    // The host span carries the game's own brand accent here.
+    StepRow(1, annotatedHostLine(stringResource(R.string.join_open_host), host, game.accentColor))
     StepRow(2, AnnotatedString(stringResource(R.string.play_step_scan)))
   }
 }

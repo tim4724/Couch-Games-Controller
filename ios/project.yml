@@ -63,10 +63,6 @@ targets:
             UIWindowSceneSessionRoleApplication:
               - UISceneConfigurationName: Default
                 UISceneDelegateClassName: "$(PRODUCT_MODULE_NAME).SceneDelegate"
-        CFBundleURLTypes:
-          - CFBundleURLName: com.couchgames.controller
-            CFBundleURLSchemes:
-              - couchgames
   # Smoke test + store-screenshot capture (see StoreScreenshotTests.swift).
   CouchGamesUITests:
     type: bundle.ui-testing

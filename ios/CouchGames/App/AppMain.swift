@@ -43,18 +43,10 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         // Cold-start deep link: connectionOptions only exist at scene connect,
         // so "consumed once, never replayed" holds by construction.
-        if let url = connectionOptions.urlContexts.first?.url {
-            router.handleIncomingURL(url)
-        } else if let url = connectionOptions.userActivities
+        if let url = connectionOptions.userActivities
             .first(where: { $0.activityType == NSUserActivityTypeBrowsingWeb })?.webpageURL {
             router.handleIncomingURL(url)
         }
-    }
-
-    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
-        // Custom scheme (couchgames://) while running.
-        guard let url = URLContexts.first?.url else { return }
-        router.handleIncomingURL(url)
     }
 
     func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
@@ -95,16 +87,4 @@ final class RootHostingController: UIHostingController<RootView> {
     }
 
     private init() {}
-}
-
-// MARK: - Deep-link normalization
-
-/// couchgames://host/path?q#f → "https://host/path?q#f" (scheme swap); any other URL → absoluteString.
-func normalizeDeepLink(_ url: URL) -> String {
-    guard url.scheme?.lowercased() == "couchgames",
-          var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-        return url.absoluteString
-    }
-    components.scheme = "https"
-    return components.url?.absoluteString ?? url.absoluteString
 }

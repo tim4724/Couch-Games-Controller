@@ -32,7 +32,7 @@ enum Route: Hashable {
     func handleIncomingURL(_ url: URL) {
         // Deep link always lands on Main; MainScreen owns the resolve + name gate.
         path.removeAll()
-        pendingDeepLink = normalizeDeepLink(url)
+        pendingDeepLink = url.absoluteString
     }
 
     func consumeDeepLink() {

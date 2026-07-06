@@ -67,11 +67,15 @@ class StoreScreenshotTest {
     // First launch mints a random FunnyName — pin the name BEFORE the activity starts
     // so assertions and store screenshots are deterministic.
     ProfileStore.save(appContext, Profile(PLAYER_NAME))
+    // A fresh device shows the one-time "Viewing full screen" education overlay the
+    // first time an app hides the system bars (the in-game host does) — pre-confirm it.
+    shell("settings put secure immersive_mode_confirmations confirmed")
   }
 
   @After
-  fun resetNightMode() {
+  fun resetDeviceState() {
     shell("cmd uimode night no")
+    shell("am broadcast -a com.android.systemui.demo -e command exit")
   }
 
   @Test fun lightMode() = captureAll(dark = false)
@@ -84,8 +88,22 @@ class StoreScreenshotTest {
     // via configChanges, but a pre-launch flip sidesteps the question entirely).
     shell("cmd uimode night " + if (dark) "yes" else "no")
     Thread.sleep(1_000)
+    // The uimode flip knocks SystemUI out of demo mode, so the clean status bar
+    // (fixed clock, full battery/signal, no notifications) is re-applied here, per
+    // pass — not in the CI script.
+    applyDemoStatusBar()
     ActivityScenario.launch(MainActivity::class.java).use { walkHomeFlow(suffix) }
     captureInGame(suffix)
+  }
+
+  private fun applyDemoStatusBar() {
+    shell("settings put global sysui_demo_allowed 1")
+    shell("am broadcast -a com.android.systemui.demo -e command enter")
+    shell("am broadcast -a com.android.systemui.demo -e command battery -e level 100 -e plugged false")
+    shell("am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level 4 -e fully true")
+    shell("am broadcast -a com.android.systemui.demo -e command notifications -e visible false")
+    shell("am broadcast -a com.android.systemui.demo -e command clock -e hhmm 0941")
+    Thread.sleep(500)
   }
 
   private fun walkHomeFlow(suffix: String) {

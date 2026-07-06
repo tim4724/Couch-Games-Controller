@@ -46,7 +46,9 @@ final class StoreScreenshotTests: XCTestCase {
             "-cg_profile.name", playerName,
             "-AppleLanguages", "(en)",
             "-AppleLocale", "en_US",
-            "-UIUserInterfaceStyle", dark ? "Dark" : "Light",
+            // Window-level override via the app's DEBUG hook — the documented
+            // -UIUserInterfaceStyle launch arg proved unreliable on CI simulators.
+            "-uitest.appearance", dark ? "dark" : "light",
         ]
         app.launch()
 

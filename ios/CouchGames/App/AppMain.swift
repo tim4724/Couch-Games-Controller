@@ -49,12 +49,17 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         }
 
         #if DEBUG
-        // UI-test deep-link hook (StoreScreenshotTests): Universal Links need a live
-        // AASA + Safari round-trip, so simulator tests inject the join URL as a launch
-        // argument instead (`-uitest.deepLink <url>`, read via the argument domain).
+        // UI-test hooks (StoreScreenshotTests), read via the argument domain:
+        // `-uitest.deepLink <url>` — Universal Links need a live AASA + Safari
+        // round-trip, so simulator tests inject the join URL directly instead.
+        // `-uitest.appearance dark|light` — forces the interface style at the window
+        // (the `-UIUserInterfaceStyle` launch arg proved unreliable on CI simulators).
         if let link = UserDefaults.standard.string(forKey: "uitest.deepLink"),
            let url = URL(string: link) {
             router.handleIncomingURL(url)
+        }
+        if let style = UserDefaults.standard.string(forKey: "uitest.appearance") {
+            window.overrideUserInterfaceStyle = style == "dark" ? .dark : .light
         }
         #endif
     }

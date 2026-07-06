@@ -3,7 +3,6 @@
          match HexStacker-Party's i18n; informal register (tu) like the rest of the suite. -->
     <string name="home_subtitle">Manette</string>
     <string name="about">À propos</string>
-    <string name="rejoin_game">Rejoindre %1$s</string>
     <string name="room_code_label">Salle %1$s</string>
     <string name="status_live">Disponible</string>
     <string name="status_coming_soon">Bientôt disponible</string>

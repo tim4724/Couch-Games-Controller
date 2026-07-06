@@ -38,8 +38,8 @@ MANIFESTS = [
 
 # Android keys with no iOS counterpart, with the reason why.
 ANDROID_ONLY = {
-    "home_subtitle",     # iOS renders the wordmark image, not a text subtitle
     "back",              # iOS uses the system back affordance
+    "version_label",     # version footer: iOS appends the build number, so the formats differ
     "open_source_licenses",  # Android-only screen (iOS has no bundled licenses list)
     # CameraX scanner UI: iOS's AVFoundation scanner has its own copy (IOS_ONLY)
     "close_scanner",
@@ -63,6 +63,7 @@ IOS_ONLY = {
     "Unable to use the camera",
     "QR scanning is not supported on this device",
     "Scanner unavailable: %@",
+    "Version %@ (%@)",   # version footer: Android shows the version name only
 }
 
 problems = []

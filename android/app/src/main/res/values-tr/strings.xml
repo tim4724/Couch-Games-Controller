@@ -3,7 +3,6 @@
          match HexStacker-Party's i18n; informal register (sen) like the rest of the suite. -->
     <string name="home_subtitle">Kumanda</string>
     <string name="about">Hakkında</string>
-    <string name="rejoin_game">%1$s oyununa yeniden katıl</string>
     <string name="room_code_label">Oda %1$s</string>
     <string name="status_live">Yayında</string>
     <string name="status_coming_soon">Çok yakında</string>

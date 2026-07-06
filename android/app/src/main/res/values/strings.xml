@@ -4,7 +4,6 @@
     <!-- Home -->
     <string name="home_subtitle">Controller</string>
     <string name="about">About</string>
-    <string name="rejoin_game">Rejoin %1$s</string>
     <string name="room_code_label">Room %1$s</string>
     <string name="status_live">Live</string>
     <string name="status_coming_soon">Coming soon</string>

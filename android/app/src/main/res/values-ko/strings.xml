@@ -4,7 +4,6 @@
          반말, so game_end_* carry 요 here to match the surrounding strings). -->
     <string name="home_subtitle">컨트롤러</string>
     <string name="about">정보</string>
-    <string name="rejoin_game">%1$s 다시 참여</string>
     <string name="room_code_label">방 %1$s</string>
     <string name="status_live">플레이 가능</string>
     <string name="status_coming_soon">출시 예정</string>

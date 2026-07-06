@@ -3,7 +3,6 @@
          match HexStacker-Party's i18n; neutral você register (BR-leaning, like Play's default). -->
     <string name="home_subtitle">Controle</string>
     <string name="about">Sobre</string>
-    <string name="rejoin_game">Voltar para %1$s</string>
     <string name="room_code_label">Sala %1$s</string>
     <string name="status_live">Disponível</string>
     <string name="status_coming_soon">Em breve</string>

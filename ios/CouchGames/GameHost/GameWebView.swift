@@ -201,12 +201,17 @@ struct GameWebView: UIViewRepresentable {
         /// Read the page's declared icon URL (WKWebView has no favicon API), fetch it
         /// off-main into the current room's slot, so the home rejoin card can show the
         /// game's own icon instead of a generic play glyph. Once per session; a miss
-        /// (no icon, non-https, bad response) silently leaves the glyph in place.
+        /// (no icon, non-https, off allow-list, bad response) silently leaves the glyph
+        /// in place. The href is untrusted page input, so its host is pinned to the same
+        /// navigation allow-list — otherwise a page could aim the fetch at an arbitrary
+        /// host and leak the user's IP there.
         private func captureFavicon(_ webView: WKWebView) {
             guard !faviconCaptured else { return }
             faviconCaptured = true
+            let allowedDomains = parent.allowedDomains
             webView.evaluateJavaScript(GameHostJS.faviconHref) { result, _ in
-                guard let href = result as? String, let url = URL(string: href), url.scheme == "https" else { return }
+                guard let href = result as? String, let url = URL(string: href), url.scheme == "https",
+                      allowedDomains.contains(where: { hostInDomain(url.host, $0) }) else { return }
                 Task.detached(priority: .utility) {
                     guard let (data, response) = try? await URLSession.shared.data(from: url),
                           (response as? HTTPURLResponse).map({ (200..<300).contains($0.statusCode) }) ?? false,

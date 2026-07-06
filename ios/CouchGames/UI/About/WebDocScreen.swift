@@ -17,16 +17,24 @@ struct WebDocScreen: View {
 
     @Environment(\.cgPalette) private var palette
     @State private var isLoading = true
+    // Main-document load failure (no connection / host unreachable). Retry bumps a
+    // token the representable observes to re-issue the request.
+    @State private var failed = false
+    @State private var reloadToken = 0
 
     var body: some View {
         ZStack {
             // The screen chrome uses the same surface as home/About (and as the
             // hosted page itself), so nothing shows the stock WKWebView white.
             palette.background.ignoresSafeArea()
-            WebDocView(url: url, surface: UIColor(palette.background), isLoading: $isLoading, onOpenDoc: onOpenDoc)
+            WebDocView(url: url, surface: UIColor(palette.background), isLoading: $isLoading,
+                       failed: $failed, reloadToken: reloadToken, onOpenDoc: onOpenDoc)
                 .ignoresSafeArea(.container, edges: .bottom)
-            if isLoading {
+            if isLoading && !failed {
                 ProgressView()
+            }
+            if failed {
+                WebDocErrorView { reloadToken += 1 }
             }
         }
         .navigationTitle(title)
@@ -34,10 +42,39 @@ struct WebDocScreen: View {
     }
 }
 
+/// Shown over the web view when the document can't be loaded, so the player sees a
+/// clear message and a way out instead of a blank surface. Reuses the join flow's
+/// "couldn't reach the server" copy — same cause, already localized.
+private struct WebDocErrorView: View {
+    @Environment(\.cgPalette) private var palette
+    let onRetry: () -> Void
+
+    var body: some View {
+        ZStack {
+            palette.background.ignoresSafeArea()
+            VStack(spacing: 24) {
+                // Short form — the Retry button already says "try again".
+                Text(String(localized: "Couldn’t reach the server."))
+                    .font(.cgBodyLarge)
+                    .foregroundStyle(palette.onBackground)
+                    .multilineTextAlignment(.center)
+                Button(action: onRetry) {
+                    Text(String(localized: "Try again")).font(.cgTitleMedium)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(palette.primary)
+            }
+            .padding(.horizontal, 32)
+        }
+    }
+}
+
 private struct WebDocView: UIViewRepresentable {
     let url: String
     let surface: UIColor
     @Binding var isLoading: Bool
+    @Binding var failed: Bool
+    let reloadToken: Int
     let onOpenDoc: (String) -> Void
 
     // The page renders its own <h1> title (e.g. "DATENSCHUTZERKLÄRUNG"); in-app the
@@ -54,7 +91,7 @@ private struct WebDocView: UIViewRepresentable {
     """
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(isLoading: $isLoading, onOpenDoc: onOpenDoc)
+        Coordinator(isLoading: $isLoading, failed: $failed, onOpenDoc: onOpenDoc)
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -76,20 +113,36 @@ private struct WebDocView: UIViewRepresentable {
         return webView
     }
 
-    func updateUIView(_ uiView: WKWebView, context: Context) {}
+    func updateUIView(_ uiView: WKWebView, context: Context) {
+        // A Retry tap bumps reloadToken; re-issue the original request (reload() is a
+        // no-op when the prior navigation never committed, e.g. offline at first load).
+        if reloadToken != context.coordinator.lastReloadToken {
+            context.coordinator.lastReloadToken = reloadToken
+            if let requestURL = URL(string: url) {
+                uiView.load(URLRequest(url: requestURL))
+            }
+        }
+    }
 
     final class Coordinator: NSObject, WKNavigationDelegate {
         private let isLoading: Binding<Bool>
+        private let failed: Binding<Bool>
         private let onOpenDoc: (String) -> Void
+        var lastReloadToken = 0
 
-        init(isLoading: Binding<Bool>, onOpenDoc: @escaping (String) -> Void) {
+        init(isLoading: Binding<Bool>, failed: Binding<Bool>, onOpenDoc: @escaping (String) -> Void) {
             self.isLoading = isLoading
+            self.failed = failed
             self.onOpenDoc = onOpenDoc
         }
 
         // Dispatch async so we never mutate SwiftUI state during a view update.
         private func setLoading(_ value: Bool) {
             DispatchQueue.main.async { self.isLoading.wrappedValue = value }
+        }
+
+        private func setFailed(_ value: Bool) {
+            DispatchQueue.main.async { self.failed.wrappedValue = value }
         }
 
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
@@ -120,6 +173,7 @@ private struct WebDocView: UIViewRepresentable {
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             setLoading(true)
+            setFailed(false)  // a fresh load (incl. Retry) clears any prior error
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -127,11 +181,24 @@ private struct WebDocView: UIViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-            setLoading(false)
+            reportLoadFailure(error)
         }
 
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            reportLoadFailure(error)
+        }
+
+        // A real load failure (offline, host unreachable, TLS/timeout) surfaces the
+        // error state. Not every "failure" is one: cancelling a navigation in
+        // decidePolicyFor (external links and the cross-doc push both do) fires here
+        // with NSURLErrorCancelled or WebKit's frame-load-interrupted (102) — those
+        // are deliberate, so ignore them.
+        private func reportLoadFailure(_ error: Error) {
             setLoading(false)
+            let ns = error as NSError
+            if ns.domain == NSURLErrorDomain, ns.code == NSURLErrorCancelled { return }
+            if ns.domain == "WebKitErrorDomain", ns.code == 102 { return }
+            setFailed(true)
         }
     }
 }

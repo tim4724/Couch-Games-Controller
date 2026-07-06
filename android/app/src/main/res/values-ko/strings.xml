@@ -55,6 +55,8 @@
     <string name="error_code_unmatched">지금은 이 코드를 게임과 연결할 수 없어요.</string>
     <string name="error_room_not_found_or_expired">방을 찾을 수 없거나 만료됐어요.</string>
     <string name="error_server_unreachable">서버에 연결할 수 없어요. 다시 시도해 주세요.</string>
+    <string name="error_server_unreachable_short">서버에 연결할 수 없어요.</string>
+    <string name="action_retry">다시 시도</string>
     <!-- Game catalog copy (keyed by manifest game id) -->
     <string name="game_hexstacker_players">1~8명</string>
     <string name="game_tinytrack_players">1~4명</string>

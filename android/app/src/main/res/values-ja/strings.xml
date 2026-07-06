@@ -55,6 +55,8 @@
     <string name="error_code_unmatched">現在このコードをゲームに関連付けられません。</string>
     <string name="error_room_not_found_or_expired">ルームが見つからないか期限切れです。</string>
     <string name="error_server_unreachable">サーバーに接続できませんでした。もう一度お試しください。</string>
+    <string name="error_server_unreachable_short">サーバーに接続できませんでした。</string>
+    <string name="action_retry">再試行</string>
     <!-- Game catalog copy (keyed by manifest game id) -->
     <string name="game_hexstacker_players">1〜8人</string>
     <string name="game_tinytrack_players">1〜4人</string>

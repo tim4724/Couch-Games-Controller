@@ -54,6 +54,8 @@
     <string name="error_code_unmatched">Bu kod şu anda bir oyunla eşleştirilemiyor.</string>
     <string name="error_room_not_found_or_expired">Oda bulunamadı veya süresi doldu.</string>
     <string name="error_server_unreachable">Sunucuya ulaşılamadı. Tekrar dene.</string>
+    <string name="error_server_unreachable_short">Sunucuya ulaşılamadı.</string>
+    <string name="action_retry">Yeniden dene</string>
     <!-- Game catalog copy (keyed by manifest game id) -->
     <string name="game_hexstacker_players">1–8 oyuncu</string>
     <string name="game_tinytrack_players">1–4 oyuncu</string>

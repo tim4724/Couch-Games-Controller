@@ -54,6 +54,8 @@
     <string name="error_code_unmatched">Сейчас этот код не удаётся сопоставить с игрой.</string>
     <string name="error_room_not_found_or_expired">Комната не найдена или устарела.</string>
     <string name="error_server_unreachable">Не удалось связаться с сервером. Попробуй ещё раз.</string>
+    <string name="error_server_unreachable_short">Не удалось связаться с сервером.</string>
+    <string name="action_retry">Повторить</string>
     <!-- Game catalog copy (keyed by manifest game id) -->
     <string name="game_hexstacker_players">1–8 игроков</string>
     <string name="game_tinytrack_players">1–4 игрока</string>

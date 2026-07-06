@@ -12,6 +12,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -51,6 +52,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -116,6 +120,10 @@ fun MainScreen(
   onDeepLinkConsumed: () -> Unit = {},
   onJoin: (joinUrl: String, title: String, allowedHosts: List<String>) -> Unit = { _, _, _ -> },
   onOpenAbout: () -> Unit = {},
+  // Set when a game reports it ended and the host popped back here — shown as a banner
+  // in the rejoin slot. Cleared on dismiss (auto after a few seconds, or tap/swipe).
+  gameEndBanner: String? = null,
+  onDismissGameEndBanner: () -> Unit = {},
 ) {
   val context = LocalContext.current
   // Config-aware resources for string lookups in callbacks (context.getString on
@@ -244,6 +252,11 @@ fun MainScreen(
             .padding(top = 8.dp),
           verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
+          // The game-end notice sits at the top of the content, above the rejoin card
+          // (which is only present when the room is still alive). A high-contrast strip
+          // rather than a bottom snackbar — the player was returned here, so the notice
+          // needs to land where their eye already is.
+          GameEndBanner(message = gameEndBanner, onDismiss = onDismissGameEndBanner)
           // A relay-confirmed room springs the rejoin card in; when the room dies it
           // springs back out. Retain the last target so the exit animation still has
           // content to render after `rejoin` clears (mirrors iOS's scale+fade).
@@ -412,6 +425,60 @@ private fun rememberPressScale(interaction: MutableInteractionSource): Float {
     label = "cardPress",
   )
   return scale
+}
+
+// The game-end notice: a high-contrast strip in the rejoin slot. Auto-dismisses after
+// 5s; a tap or a horizontal swipe dismisses it early. Enter/exit mirror the rejoin card
+// so the two stack cleanly when both are present.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GameEndBanner(message: String?, onDismiss: () -> Unit) {
+  // Retain the last text so the exit animation still has content after `message` clears.
+  var lastMessage by remember { mutableStateOf<String?>(null) }
+
+  LaunchedEffect(message) {
+    if (message != null) {
+      lastMessage = message
+      delay(5_000)
+      onDismiss()
+    }
+  }
+
+  AnimatedVisibility(
+    visible = message != null,
+    enter = fadeIn() + scaleIn(initialScale = 0.96f),
+    exit = fadeOut() + scaleOut(targetScale = 0.96f),
+  ) {
+    // Swipe-off is handled by the framework's SwipeToDismissBox. Its state is scoped to
+    // this content, which is disposed on exit and recomposed on the next enter, so the
+    // swipe resets on its own without any manual reset.
+    val dismissState = rememberSwipeToDismissBoxState()
+    LaunchedEffect(dismissState.currentValue) {
+      if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) onDismiss()
+    }
+    SwipeToDismissBox(
+      state = dismissState,
+      backgroundContent = {},   // nothing revealed — the strip just slides away
+    ) {
+      Surface(
+        color = MaterialTheme.colorScheme.inverseSurface,
+        contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier
+          .fillMaxWidth()
+          .clickable(
+            indication = null,
+            interactionSource = remember { MutableInteractionSource() },
+          ) { onDismiss() },
+      ) {
+        Text(
+          text = lastMessage.orEmpty(),
+          modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+          style = MaterialTheme.typography.bodyMedium,
+        )
+      }
+    }
+  }
 }
 
 @Composable

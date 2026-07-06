@@ -41,12 +41,15 @@ struct GameWebView: UIViewRepresentable {
     let playerName: String             // "" = blank → never injected
     let safeZone: SafeZone             // points == CSS px
     let onLoaded: () -> Void           // every didFinish
-    let onGameEnd: (String?) -> Void   // fire-once enforced by Coordinator
+    let onGameEnd: (String?) -> Void   // fire-once
+    @Binding var failed: Bool          // main-doc load failed — drives the retry overlay
+    let reloadToken: Int               // bumped by Retry → re-issue the join request
     let onThemeChanged: (PageTheme) -> Void
     let onTitleChanged: (String) -> Void  // the page's <title>, trimmed & non-empty
 
     init(joinUrl: String, allowedDomains: [String], playerName: String, safeZone: SafeZone,
          onLoaded: @escaping () -> Void, onGameEnd: @escaping (String?) -> Void,
+         failed: Binding<Bool>, reloadToken: Int,
          onThemeChanged: @escaping (PageTheme) -> Void,
          onTitleChanged: @escaping (String) -> Void) {
         self.joinUrl = joinUrl
@@ -55,6 +58,8 @@ struct GameWebView: UIViewRepresentable {
         self.safeZone = safeZone
         self.onLoaded = onLoaded
         self.onGameEnd = onGameEnd
+        self._failed = failed
+        self.reloadToken = reloadToken
         self.onThemeChanged = onThemeChanged
         self.onTitleChanged = onTitleChanged
     }
@@ -124,6 +129,15 @@ struct GameWebView: UIViewRepresentable {
             )
             webView.evaluateJavaScript(GameHostJS.safeZonePush(safeZone), completionHandler: nil)
         }
+
+        // A Retry tap bumps reloadToken → re-issue the original join request (reload()
+        // is a no-op when the failed navigation never committed, e.g. offline at join).
+        if reloadToken != coordinator.lastReloadToken {
+            coordinator.lastReloadToken = reloadToken
+            if let url = URL(string: joinUrl) {
+                webView.load(URLRequest(url: url))
+            }
+        }
     }
 
     /// Tear the web view down so the game's WebSocket/audio fully stop the moment we pop.
@@ -142,7 +156,11 @@ struct GameWebView: UIViewRepresentable {
         var isTearingDown = false
         var lastInjectedName = ""
         var lastPushedZone = SafeZone()
-        private var gameEndFired = false  // fire-once: a game spamming gameEnded must not pop extra entries
+        var lastReloadToken = 0
+        // Fire-once for the game-reported end — a game spamming gameEnded must pop
+        // home only once. (A load failure is NOT terminal: it flips `failed` for the
+        // retry overlay, so it doesn't gate on this.)
+        private var didEnd = false
         private var faviconCaptured = false  // once per session — didFinish fires on every navigation
 
         init(parent: GameWebView) {
@@ -183,6 +201,33 @@ struct GameWebView: UIViewRepresentable {
             }
             // javascript:, file:, custom schemes, … — blocked entirely.
             decisionHandler(.cancel)
+        }
+
+        /// The main document failed to load at the network level — no connection, host
+        /// unreachable, DNS/TLS/timeout. (An HTTP 4xx/5xx is a *successful* navigation
+        /// to WebKit and shows the server's body, so it never lands here.) Provisional =
+        /// the initial connection never committed (the offline-at-join case); the plain
+        /// didFail = a committed load dropped. Both bail home with a message rather than
+        /// leave a dead spinner up.
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!,
+                     withError error: Error) {
+            reportLoadFailure(error)
+        }
+
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            reportLoadFailure(error)
+        }
+
+        private func reportLoadFailure(_ error: Error) {
+            // Ignore our own teardown and a game already ended. Off-list navigations we
+            // cancel in decidePolicyFor also land here — as NSURLErrorCancelled or
+            // WebKit's frame-load-interrupted (102) — and are deliberate, not failures.
+            guard !isTearingDown, !didEnd else { return }
+            let ns = error as NSError
+            if ns.domain == NSURLErrorDomain, ns.code == NSURLErrorCancelled { return }
+            if ns.domain == "WebKitErrorDomain", ns.code == 102 { return }
+            // Not terminal — surface the in-place retry overlay; Retry re-issues the load.
+            DispatchQueue.main.async { self.parent.failed = true }
         }
 
         /// Every page finish: loading done, then re-assert the name
@@ -238,8 +283,8 @@ struct GameWebView: UIViewRepresentable {
             else { return }
             switch type {
             case "gameEnded":
-                guard !gameEndFired else { return }
-                gameEndFired = true
+                guard !didEnd else { return }
+                didEnd = true
                 parent.onGameEnd(body["value"] as? String)  // null tolerated → generic message
             case "themeChanged":
                 // Not fire-once: themes change repeatedly. Parsed strictly.

@@ -54,6 +54,8 @@
     <string name="error_code_unmatched">Este código não pode ser associado a um jogo no momento.</string>
     <string name="error_room_not_found_or_expired">Sala não encontrada ou expirada.</string>
     <string name="error_server_unreachable">Não foi possível conectar ao servidor. Tente de novo.</string>
+    <string name="error_server_unreachable_short">Não foi possível conectar ao servidor.</string>
+    <string name="action_retry">Tentar novamente</string>
     <!-- Game catalog copy (keyed by manifest game id) -->
     <string name="game_hexstacker_players">1–8 jogadores</string>
     <string name="game_tinytrack_players">1–4 jogadores</string>

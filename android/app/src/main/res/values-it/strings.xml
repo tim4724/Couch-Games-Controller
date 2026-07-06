@@ -54,6 +54,8 @@
     <string name="error_code_unmatched">Al momento questo codice non può essere associato a un gioco.</string>
     <string name="error_room_not_found_or_expired">Stanza non trovata o scaduta.</string>
     <string name="error_server_unreachable">Impossibile raggiungere il server. Riprova.</string>
+    <string name="error_server_unreachable_short">Impossibile raggiungere il server.</string>
+    <string name="action_retry">Riprova</string>
     <!-- Game catalog copy (keyed by manifest game id) -->
     <string name="game_hexstacker_players">1–8 giocatori</string>
     <string name="game_tinytrack_players">1–4 giocatori</string>

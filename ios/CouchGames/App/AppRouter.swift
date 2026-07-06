@@ -56,9 +56,11 @@ enum Route: Hashable {
     }
 
     func gameEnded(reason: String?) {
-        // The player didn't choose to leave — silence would read as a crash.
+        // The player didn't choose to leave — silence would read as a crash. Shown as a
+        // banner in the home rejoin slot, not a bottom overlay. (A load failure isn't a
+        // session end: the host shows a retry overlay in place.)
         pop()
-        messages.showSnackbar(gameEndMessage(reason))
+        messages.showGameEndBanner(gameEndMessage(reason))
     }
 }
 
@@ -70,18 +72,15 @@ struct ToastItem: Identifiable, Equatable {
     let long: Bool
 }
 
-struct SnackbarItem: Identifiable, Equatable {
-    let id: UUID
-    let text: String
-}
-
 @MainActor @Observable final class MessageCenter {
 
     var toast: ToastItem? = nil
-    var snackbar: SnackbarItem? = nil
+    // The game-end notice, rendered by MainScreen as a banner in the rejoin slot (not a
+    // floating overlay). Auto-clears after 5s; a tap/swipe on the banner clears it early.
+    var gameEndBanner: String? = nil
 
     @ObservationIgnored private var toastTask: Task<Void, Never>? = nil
-    @ObservationIgnored private var snackbarTask: Task<Void, Never>? = nil
+    @ObservationIgnored private var gameEndTask: Task<Void, Never>? = nil
 
     init() {}
 
@@ -96,15 +95,19 @@ struct SnackbarItem: Identifiable, Equatable {
         }
     }
 
-    func showSnackbar(_ text: String) {
-        snackbarTask?.cancel()
-        let item = SnackbarItem(id: UUID(), text: text)
-        snackbar = item
-        snackbarTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(4.0))
-            guard !Task.isCancelled, let self, self.snackbar?.id == item.id else { return }
-            self.snackbar = nil
+    func showGameEndBanner(_ text: String) {
+        gameEndTask?.cancel()
+        gameEndBanner = text
+        gameEndTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(5.0))
+            guard !Task.isCancelled, let self else { return }
+            self.gameEndBanner = nil
         }
+    }
+
+    func dismissGameEndBanner() {
+        gameEndTask?.cancel()
+        gameEndBanner = nil
     }
 }
 
@@ -159,7 +162,7 @@ struct RootView: View {
                     }
                 }
             }
-            // Above the NavigationStack so the game-end snackbar survives the pop.
+            // Above the NavigationStack so a toast floats over whatever screen is up.
             MessageOverlay()
         }
         .cgThemed()
@@ -183,22 +186,11 @@ struct RootView: View {
 struct MessageOverlay: View {
 
     @Environment(MessageCenter.self) private var messages
-    @Environment(\.cgPalette) private var palette
 
     init() {}
 
     var body: some View {
         VStack(spacing: 8) {
-            if let snackbar = messages.snackbar {
-                Text(snackbar.text)
-                    .font(.cgBodyMedium)
-                    .foregroundStyle(palette.inverseOnSurface)
-                    .padding(16)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(palette.inverseSurface))
-                    .padding(.horizontal, 16)
-                    .transition(.opacity)
-            }
             if let toast = messages.toast {
                 Text(toast.text)
                     .font(.cgBodyMedium)
@@ -215,6 +207,5 @@ struct MessageOverlay: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         .allowsHitTesting(false)
         .animation(.easeInOut(duration: 0.2), value: messages.toast)
-        .animation(.easeInOut(duration: 0.2), value: messages.snackbar)
     }
 }

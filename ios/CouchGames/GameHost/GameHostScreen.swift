@@ -27,6 +27,10 @@ struct GameHostScreen: View {
     // inside a sheet content closure is not dependency-tracked and can be stale.
     @State private var renameRequest: RenameRequest? = nil
     @State private var loading = true
+    // The main document failed to load (no connection / host unreachable) — drives the
+    // in-place retry overlay. Retry bumps the token GameWebView observes to reload.
+    @State private var failed = false
+    @State private var reloadToken = 0
     @State private var pageTheme = PageTheme()
     // The page's own <title> supersedes the manifest name in the Leave bar once the
     // controller reports one, so games not (yet) in the bundled manifest still show a
@@ -109,6 +113,8 @@ struct GameHostScreen: View {
                 safeZone: computedSafeZone,
                 onLoaded: { withAnimation(.easeOut(duration: 0.3)) { loading = false } },
                 onGameEnd: onGameEnd,
+                failed: $failed,
+                reloadToken: reloadToken,
                 onThemeChanged: { pageTheme = $0 },
                 onTitleChanged: { pageTitle = $0 }
             )
@@ -119,6 +125,13 @@ struct GameHostScreen: View {
                 loadingCover
                     .zIndex(1)
                     .transition(.opacity)
+            }
+
+            // Load failed: opaque cover offering retry-in-place (so a transient blip
+            // doesn't cost a re-scan) or Leave. Above the join cover, below the chrome.
+            if failed {
+                retryCover
+                    .zIndex(1)
             }
 
             chrome
@@ -184,6 +197,32 @@ struct GameHostScreen: View {
                         .font(.cgBodyMedium)
                         .foregroundStyle(hostPalette.onSurfaceVariant)
                 }
+            }
+    }
+
+    private var retryCover: some View {
+        hostPalette.surface
+            .ignoresSafeArea()
+            .overlay {
+                VStack(spacing: 16) {
+                    // Short form — the Retry button already says "try again".
+                    Text("Couldn’t reach the server.")
+                        .font(.cgBodyLarge)
+                        .foregroundStyle(hostPalette.onSurface)
+                        .multilineTextAlignment(.center)
+                    Button {
+                        // Retry in place: clear the error, bring the join cover back, reload.
+                        failed = false
+                        loading = true
+                        reloadToken += 1
+                    } label: {
+                        Text("Try again").font(.cgTitleMedium)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(hostPalette.primary)
+                    // No Leave button here — the Leave bar's X already exits.
+                }
+                .padding(.horizontal, 32)
             }
     }
 

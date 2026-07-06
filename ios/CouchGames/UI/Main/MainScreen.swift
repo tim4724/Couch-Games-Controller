@@ -59,6 +59,14 @@ struct MainScreen: View {
 
             ScrollView {
                 VStack(spacing: 20) {
+                    // The game-end notice sits atop the content, above the rejoin card
+                    // (present only while the room is alive) — a high-contrast strip
+                    // where the player's eye already is, not a bottom overlay.
+                    if let banner = messages.gameEndBanner {
+                        GameEndBanner(message: banner) { messages.dismissGameEndBanner() }
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                    }
+
                     if let rejoin {
                         RejoinCard(room: rejoin) {
                             resolveAndJoin(rejoin.joinUrl)
@@ -77,6 +85,7 @@ struct MainScreen: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
+                .animation(.spring(duration: 0.45), value: messages.gameEndBanner)
             }
 
             JoinCard(
@@ -388,6 +397,46 @@ private struct ScanRequest: Identifiable {
     let id = UUID()
     let games: [Game]
     let profile: Profile
+}
+
+// MARK: - GameEndBanner
+
+/// The game-end notice shown in the rejoin slot: a high-contrast strip that
+/// auto-dismisses (timer lives in MessageCenter) and clears early on a tap or a
+/// horizontal swipe.
+private struct GameEndBanner: View {
+    let message: String
+    let onDismiss: () -> Void
+
+    @Environment(\.cgPalette) private var palette
+    @State private var dragX: CGFloat = 0
+
+    var body: some View {
+        Text(message)
+            .font(.cgBodyMedium)
+            .foregroundStyle(palette.inverseOnSurface)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(RoundedRectangle(cornerRadius: 12).fill(palette.inverseSurface))
+            .contentShape(Rectangle())
+            .offset(x: dragX)
+            .gesture(
+                DragGesture()
+                    .onChanged { dragX = $0.translation.width }
+                    .onEnded { value in
+                        if abs(value.translation.width) > 96 {
+                            withAnimation(.easeOut(duration: 0.2)) {
+                                dragX = value.translation.width > 0 ? 600 : -600
+                            }
+                            onDismiss()
+                        } else {
+                            withAnimation(.spring) { dragX = 0 }
+                        }
+                    }
+            )
+            .onTapGesture { onDismiss() }
+    }
 }
 
 // MARK: - RejoinCard

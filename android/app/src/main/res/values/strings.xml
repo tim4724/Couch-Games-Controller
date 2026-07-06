@@ -49,7 +49,8 @@
     <string name="imprint">Impressum</string>
     <string name="open_source_licenses">Open source licenses</string>
 
-    <!-- Game-reported session end (Navigation.gameEndMessage) -->
+    <!-- Game-reported session end (Navigation.gameEndMessage), shown as a banner on
+         return home. -->
     <string name="game_end_room_not_found">Room not found</string>
     <string name="game_end_room_full">Room is full</string>
     <string name="game_end_replaced">You joined from another device</string>
@@ -64,6 +65,8 @@
     <string name="error_code_unmatched">This code can\'t be matched to a game right now.</string>
     <string name="error_room_not_found_or_expired">Room not found or expired.</string>
     <string name="error_server_unreachable">Couldn\'t reach the server. Try again.</string>
+    <string name="error_server_unreachable_short">Couldn\'t reach the server.</string>
+    <string name="action_retry">Try again</string>
     <!-- Game catalog copy (keyed by manifest game id) -->
     <string name="game_hexstacker_players">1–8 players</string>
     <string name="game_tinytrack_players">1–4 players</string>

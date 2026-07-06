@@ -13,6 +13,7 @@ import android.os.Looper
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -32,6 +33,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
@@ -39,6 +41,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -68,6 +71,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -147,6 +151,9 @@ private fun GameHostContent(
   var profile by remember { mutableStateOf(ProfileStore.load(context)) }
   var showProfile by remember { mutableStateOf(false) }
   var loading by remember { mutableStateOf(true) }
+  // The main document failed to load (no connection / host unreachable) — shows the
+  // in-place retry overlay instead of a dead join spinner.
+  var failed by remember { mutableStateOf(false) }
   // The page's own <title> supersedes the manifest name in the LEAVE bar once the
   // controller reports one, so games not (yet) in the bundled manifest still show a
   // real name instead of the generic "Couch Games" fallback. Null until the page
@@ -154,13 +161,28 @@ private fun GameHostContent(
   var pageTitle by remember { mutableStateOf<String?>(null) }
   val displayTitle = pageTitle ?: title
   val surfaceArgb = MaterialTheme.colorScheme.surface.toArgb()
-  // The bridge outlives recompositions but must call the CURRENT callbacks —
-  // hence rememberUpdatedState.
+  // The bridge/WebView client outlive recompositions but must call the CURRENT
+  // callbacks — hence rememberUpdatedState.
+  val currentOnLeave by rememberUpdatedState(onLeave)
   val currentOnGameEnd by rememberUpdatedState(onGameEnd)
   val currentOnPageTheme by rememberUpdatedState(onPageTheme)
+  // One-shot guard for the two TERMINAL exits — user LEAVE and a game-reported end.
+  // Whoever fires first wins; the loser (incl. a stray gameEnded during teardown)
+  // no-ops, so we never pop the back stack twice. A load failure is NOT terminal: it
+  // shows the retry overlay in place, and only Leave from there trips this.
+  val exited = remember { AtomicBoolean(false) }
+  val leave = { if (exited.compareAndSet(false, true)) currentOnLeave() }
+  // Retry the controller load in place (no re-scan): clear the error, bring the join
+  // cover back, reload.
+  val retry = {
+    failed = false
+    loading = true
+    webView?.reload()
+    Unit
+  }
   val hostBridge = remember {
     CouchGamesHostBridge(
-      onGameEnded = { currentOnGameEnd(it) },
+      onGameEnded = { if (exited.compareAndSet(false, true)) currentOnGameEnd(it) },
       onThemeChanged = { currentOnPageTheme(it) },
     )
   }
@@ -329,20 +351,32 @@ private fun GameHostContent(
               watchPageTheme()
               pushSafeZone()
             },
+            // The controller page itself couldn't load (no connection / host
+            // unreachable) — show the retry overlay in place, not a dead spinner.
+            // (Ignored once the player has left: the WebView is being torn down.)
+            onConnectionError = {
+              if (!exited.get()) {
+                loading = false
+                failed = true
+              }
+            },
           )
           // Capture the page favicon (keyed by host) so the home rejoin card can
           // show the game's own icon instead of a generic play glyph. WebView hands
           // us a decoded bitmap — no extra fetch — and a miss just keeps the glyph.
           webChromeClient = object : WebChromeClient() {
             override fun onReceivedIcon(view: WebView?, icon: Bitmap?) {
-              if (icon != null) RecentRoomStore.putFavicon(icon)
+              // While the load has failed, the icon/title belong to WebView's own error
+              // page ("Webpage not available") — they'd pollute the Leave bar and the
+              // persisted room card, so ignore them until a real page loads.
+              if (!failed && icon != null) RecentRoomStore.putFavicon(icon)
             }
 
             // The page's own name (ground truth over the manifest): drives the LEAVE
             // bar live and feeds the home rejoin card. Fires on every document.title
             // change, so late SPA renames are picked up too.
             override fun onReceivedTitle(view: WebView?, title: String?) {
-              if (title == null) return
+              if (failed || title == null) return
               RecentRoomStore.putTitle(title)?.let { pageTitle = it }
             }
           }
@@ -386,6 +420,32 @@ private fun GameHostContent(
           }
         }
       }
+      // Load failed: an opaque cover over the dead page offering retry-in-place (so a
+      // transient blip doesn't cost a re-scan) or Leave. Above the join cover, below
+      // the floating chrome.
+      if (failed) {
+        Box(
+          Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface),
+          contentAlignment = Alignment.Center,
+        ) {
+          Column(
+            modifier = Modifier.padding(horizontal = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+          ) {
+            Text(
+              stringResource(R.string.error_server_unreachable_short),
+              style = MaterialTheme.typography.bodyLarge,
+              color = MaterialTheme.colorScheme.onSurface,
+              textAlign = TextAlign.Center,
+            )
+            Button(onClick = retry) {
+              Text(stringResource(R.string.action_retry))
+            }
+            // No Leave button here — the Leave bar's X already exits.
+          }
+        }
+      }
     }
     // The floating chrome: status-bar strip + LEAVE bar over a scrim. Top +
     // horizontal insets only, deliberately: when a keyboard opens the system
@@ -414,7 +474,7 @@ private fun GameHostContent(
       LeaveBar(
         title = displayTitle,
         playerName = profile.name,
-        onLeave = onLeave,
+        onLeave = leave,
         onEditName = { showProfile = true },
         contentColor = barContent,
         accented = pageTheme.accent != null,
@@ -513,6 +573,7 @@ private fun contentColorOn(color: Color): Color {
 private class AllowListWebViewClient(
   private val allowedDomains: List<String>,
   private val onLoaded: () -> Unit,
+  private val onConnectionError: () -> Unit,
 ) : WebViewClient() {
   override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
     val url = request.url
@@ -523,6 +584,13 @@ private class AllowListWebViewClient(
     if (BuildConfig.DEBUG && isPrivateHost(host) && (scheme == "http" || scheme == "https")) return false
     if (scheme == "http" || scheme == "https") openExternally(view.context, url) // off-list → browser
     return true // everything not explicitly allowed is blocked from the WebView
+  }
+
+  // A network-level failure of the MAIN document (no connection, DNS/connect/timeout —
+  // NOT a 4xx/5xx, which arrives via onReceivedHttpError and means the host answered).
+  // Subresource failures are the page's own problem and ignored.
+  override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
+    if (request.isForMainFrame) onConnectionError()
   }
 
   override fun onPageFinished(view: WebView, url: String) {

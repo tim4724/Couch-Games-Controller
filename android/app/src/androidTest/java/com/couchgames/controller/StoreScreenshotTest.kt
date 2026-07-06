@@ -1,9 +1,11 @@
 package com.couchgames.controller
 
 import android.content.ContentValues
+import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Build
 import android.os.Environment
+import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -20,6 +22,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import androidx.core.net.toUri
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -34,17 +37,20 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Smoke test + store-screenshot capture in one pass: walks home → game info sheet →
- * profile sheet → manual code entry → About, asserting each screen's key content
- * (manifest load, live/soon status, name gating, version label) and saving a
- * full-device PNG per stop to shared storage (`Pictures/couchgames-screenshots`, via
+ * Smoke test + store-screenshot capture in one pass, run once per theme (light/dark):
+ * walks home → game info sheet → profile sheet → manual code entry → About, asserting
+ * each screen's key content (manifest load, live/soon status, name gating, version
+ * label), then deep-links into the HexStacker controller's `?scenario=playing` preview
+ * (the game's own gallery harness, shipped in its production bundle — renders the
+ * in-game touchpad with a stubbed connection, no live room needed). One full-device
+ * PNG per stop goes to shared storage (`Pictures/couchgames-screenshots`, via
  * MediaStore so no storage permission is needed).
  *
  * Shared storage outlives the automatic post-test uninstall, so CI simply
  * `adb pull /sdcard/Pictures/couchgames-screenshots` afterwards (and `rm -rf`s the
  * directory beforehand — MediaStore dedupes names as "x (1).png" across runs). The
- * flow deliberately avoids the QR scanner (camera) and never submits a room code —
- * nothing here depends on a live relay, so the test also runs offline.
+ * flow deliberately avoids the QR scanner (camera) and never talks to a live relay —
+ * only the in-game step needs network, to fetch the controller page itself.
  */
 @RunWith(AndroidJUnit4::class)
 class StoreScreenshotTest {
@@ -53,25 +59,36 @@ class StoreScreenshotTest {
 
   private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
   private val appContext get() = instrumentation.targetContext
-  private lateinit var scenario: ActivityScenario<MainActivity>
 
   private fun str(id: Int, vararg args: Any): String = appContext.getString(id, *args)
 
   @Before
-  fun launchWithFixedProfile() {
+  fun seedProfile() {
     // First launch mints a random FunnyName — pin the name BEFORE the activity starts
     // so assertions and store screenshots are deterministic.
     ProfileStore.save(appContext, Profile(PLAYER_NAME))
-    scenario = ActivityScenario.launch(MainActivity::class.java)
   }
 
   @After
-  fun tearDown() {
-    scenario.close()
+  fun resetNightMode() {
+    shell("cmd uimode night no")
   }
 
-  @Test
-  fun storeFlow() {
+  @Test fun lightMode() = captureAll(dark = false)
+
+  @Test fun darkMode() = captureAll(dark = true)
+
+  private fun captureAll(dark: Boolean) {
+    val suffix = if (dark) "dark" else "light"
+    // Set the theme BEFORE launching — no recreate races (the activity handles uiMode
+    // via configChanges, but a pre-launch flip sidesteps the question entirely).
+    shell("cmd uimode night " + if (dark) "yes" else "no")
+    Thread.sleep(1_000)
+    ActivityScenario.launch(MainActivity::class.java).use { walkHomeFlow(suffix) }
+    captureInGame(suffix)
+  }
+
+  private fun walkHomeFlow(suffix: String) {
     // ---- Home: catalog, live status, join card, profile chip ----
     waitForText("HexStacker")
     compose.onNodeWithText(str(R.string.app_name)).assertIsDisplayed()
@@ -83,7 +100,7 @@ class StoreScreenshotTest {
     compose.onNodeWithText(str(R.string.join_title)).assertIsDisplayed()
     compose.onNodeWithText(str(R.string.scan_code)).assertIsDisplayed()
     compose.onNodeWithText(PLAYER_NAME).assertIsDisplayed()
-    screenshot("01-home")
+    screenshot("01-home-$suffix")
 
     // ---- Game info sheet: manifest copy + join actions for the live game ----
     compose.onNodeWithText("HexStacker").performClick()
@@ -94,7 +111,7 @@ class StoreScreenshotTest {
     compose.onAllNodesWithText(str(R.string.enter_code_manually)).assertCountEquals(2)
     // Give the muted gameplay trailer a moment to prepare and render real frames.
     Thread.sleep(2_000)
-    screenshot("02-game-info")
+    screenshot("02-game-info-$suffix")
     Espresso.pressBack()
     waitForTextGone(str(R.string.game_hexstacker_players))
 
@@ -106,7 +123,7 @@ class StoreScreenshotTest {
     compose.onNodeWithText(str(R.string.save)).assertIsNotEnabled()
     nameField.performTextInput(PLAYER_NAME)
     compose.onNodeWithText(str(R.string.save)).assertIsEnabled()
-    screenshot("03-profile")
+    screenshot("03-profile-$suffix")
     compose.onNodeWithText(str(R.string.save)).performClick()
     waitForTextGone(str(R.string.save))
     compose.onNodeWithText(PLAYER_NAME).assertIsDisplayed()
@@ -116,9 +133,9 @@ class StoreScreenshotTest {
     waitForText(str(R.string.enter_room_code))
     val playButton = compose.onNode(hasText(str(R.string.join)) and hasAnyAncestor(isDialog()))
     playButton.assertIsNotEnabled()
-    compose.onNode(hasSetTextAction()).performTextInput("A3KX9p")
+    compose.onNode(hasSetTextAction()).performTextInput(ROOM_CODE)
     playButton.assertIsEnabled()
-    screenshot("04-enter-code")
+    screenshot("04-enter-code-$suffix")
     compose.onNodeWithText(str(R.string.cancel)).performClick()
     waitForTextGone(str(R.string.enter_room_code))
 
@@ -128,7 +145,27 @@ class StoreScreenshotTest {
     compose.onNodeWithText(str(R.string.imprint)).assertIsDisplayed()
     compose.onNodeWithText(str(R.string.open_source_licenses)).assertIsDisplayed()
     compose.onNodeWithText(str(R.string.version_label, BuildConfig.VERSION_NAME)).assertIsDisplayed()
-    screenshot("05-about")
+    screenshot("05-about-$suffix")
+  }
+
+  /** Deep-link (the App Link path) into the controller's scenario harness and capture
+   *  the in-game touchpad once the "Joining…" cover has faded. */
+  private fun captureInGame(suffix: String) {
+    val intent = Intent(Intent.ACTION_VIEW, IN_GAME_URL.toUri(), appContext, MainActivity::class.java)
+    ActivityScenario.launch<MainActivity>(intent).use {
+      // "Joining %1$s…" localized prefix, title-independent (the page <title>
+      // replaces the manifest name while the cover is still up).
+      val joiningPrefix = str(R.string.joining_game, MARKER).substringBefore(MARKER)
+      // The cover composes with the game host; wait for it, then for the page paint.
+      compose.waitUntil(timeoutMillis = 15_000) {
+        compose.onAllNodes(hasText(joiningPrefix, substring = true)).fetchSemanticsNodes().isNotEmpty()
+      }
+      compose.waitUntil(timeoutMillis = 30_000) {
+        compose.onAllNodes(hasText(joiningPrefix, substring = true)).fetchSemanticsNodes().isEmpty()
+      }
+      Thread.sleep(3_000) // fonts + touchpad canvas settle
+      screenshot("06-in-game-$suffix")
+    }
   }
 
   private fun waitForText(text: String) {
@@ -141,6 +178,12 @@ class StoreScreenshotTest {
     compose.waitUntil(timeoutMillis = 10_000) {
       compose.onAllNodesWithText(text).fetchSemanticsNodes().isEmpty()
     }
+  }
+
+  /** Run a shell command with shell privileges and wait for it to finish. */
+  private fun shell(cmd: String) {
+    val pfd = instrumentation.uiAutomation.executeShellCommand(cmd)
+    ParcelFileDescriptor.AutoCloseInputStream(pfd).use { it.readBytes() }
   }
 
   /** Full-device capture (system bars included) via UiAutomation — sheets and dialogs
@@ -173,6 +216,13 @@ class StoreScreenshotTest {
 
   private companion object {
     const val PLAYER_NAME = "Alex"
+    const val ROOM_CODE = "A3KX9p"
     const val SHOT_DIR = "couchgames-screenshots"
+    const val MARKER = "@@"
+
+    // The controller's own gallery/test harness (ControllerTestHarness.js, shipped in
+    // the production bundle): renders the playing screen with a stubbed connection.
+    const val IN_GAME_URL =
+      "https://hexstacker.com/$ROOM_CODE?scenario=playing&name=$PLAYER_NAME&color=0"
   }
 }

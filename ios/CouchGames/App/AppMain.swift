@@ -47,6 +47,16 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             .first(where: { $0.activityType == NSUserActivityTypeBrowsingWeb })?.webpageURL {
             router.handleIncomingURL(url)
         }
+
+        #if DEBUG
+        // UI-test deep-link hook (StoreScreenshotTests): Universal Links need a live
+        // AASA + Safari round-trip, so simulator tests inject the join URL as a launch
+        // argument instead (`-uitest.deepLink <url>`, read via the argument domain).
+        if let link = UserDefaults.standard.string(forKey: "uitest.deepLink"),
+           let url = URL(string: link) {
+            router.handleIncomingURL(url)
+        }
+        #endif
     }
 
     func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {

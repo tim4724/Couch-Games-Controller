@@ -59,12 +59,17 @@ jobs:
           working-directory: android
           script: |
             # Demo-mode status bar: fixed clock, full battery, full signal, no notifications.
+            # The setting needs a beat to reach SystemUI before the first broadcast, and
+            # the clock command is flaky right after `enter` — send it last and twice.
             adb shell settings put global sysui_demo_allowed 1
+            sleep 2
             adb shell am broadcast -a com.android.systemui.demo -e command enter
-            adb shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 0941
             adb shell am broadcast -a com.android.systemui.demo -e command battery -e level 100 -e plugged false
             adb shell am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level 4 -e fully true
             adb shell am broadcast -a com.android.systemui.demo -e command notifications -e visible false
+            adb shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 0941
+            sleep 2
+            adb shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 0941
             # The test publishes PNGs to shared storage (survives the post-test
             # uninstall); clear leftovers so MediaStore can't dedupe-rename.
             adb shell rm -rf /sdcard/Pictures/couchgames-screenshots
@@ -115,6 +120,11 @@ jobs:
           xcrun simctl status_bar "$DEVICE" override \
             --time "9:41" --batteryState charged --batteryLevel 100 \
             --cellularMode active --cellularBars 4 --operatorName " " --wifiBars 3
+          # A fresh simulator shows first-use keyboard tutorials (QuickPath education
+          # pane) over the typing screenshots — mark them as already seen.
+          xcrun simctl spawn "$DEVICE" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool true
+          xcrun simctl spawn "$DEVICE" defaults write com.apple.keyboard.preferences KeyboardDidShowProductivityTutorial -bool true
+          xcrun simctl spawn "$DEVICE" defaults write com.apple.keyboard.preferences DidShowGestureKeyboardIntroduction -bool true
 
       - name: Run screenshot UI test
         working-directory: ios

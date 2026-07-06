@@ -65,6 +65,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalResources
@@ -86,6 +87,7 @@ import com.couchgames.controller.data.JoinOutcome
 import com.couchgames.controller.data.JoinResolver
 import com.couchgames.controller.ui.components.findActivity
 import com.couchgames.controller.ui.components.stableScreenInsets
+import com.couchgames.controller.ui.components.themeLightBarIcons
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
@@ -117,17 +119,19 @@ fun ScanScreen(
 
   BackHandler(onBack = onClose)
 
-  // The scanner is always a dark surface — force light bar icons while it's up
-  // and restore whatever the theme had (same recipe as GameHostScreen).
-  DisposableEffect(Unit) {
+  // The scanner is always a dark surface — force light bar icons while it's up and
+  // restore the theme's own contrast on exit (same recipe as GameHostScreen). Keyed
+  // on uiMode: a theme flip re-runs MainActivity.applyEdgeToEdge, which stomps this,
+  // so re-assert after it.
+  val uiMode = LocalConfiguration.current.uiMode
+  DisposableEffect(uiMode) {
     val controller = context.findActivity()?.window?.let { WindowCompat.getInsetsController(it, view) }
-    val originalStatus = controller?.isAppearanceLightStatusBars ?: false
-    val originalNav = controller?.isAppearanceLightNavigationBars ?: false
     controller?.isAppearanceLightStatusBars = false
     controller?.isAppearanceLightNavigationBars = false
     onDispose {
-      controller?.isAppearanceLightStatusBars = originalStatus
-      controller?.isAppearanceLightNavigationBars = originalNav
+      val light = themeLightBarIcons(context)
+      controller?.isAppearanceLightStatusBars = light
+      controller?.isAppearanceLightNavigationBars = light
     }
   }
 

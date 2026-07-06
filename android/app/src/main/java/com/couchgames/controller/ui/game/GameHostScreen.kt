@@ -66,6 +66,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -92,6 +93,7 @@ import com.couchgames.controller.theme.CouchGamesTheme
 import com.couchgames.controller.ui.components.PlayerChip
 import com.couchgames.controller.ui.components.findActivity
 import com.couchgames.controller.ui.components.hideNavigationBar
+import com.couchgames.controller.ui.components.themeLightBarIcons
 import com.couchgames.controller.ui.main.ProfileSheet
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.roundToInt
@@ -190,17 +192,18 @@ private fun GameHostContent(
   // Hide ONLY the nav bar while in a game — the status bar stays. Hidden-nav +
   // transient-by-swipe is exactly the state that LIFTS the system's 200dp-per-edge
   // cap on gesture exclusion, so the WebView's exclusion rects (set below) can
-  // cover the whole play area. Restored on leave, along with the status-icon
-  // appearance the page theming may change.
+  // cover the whole play area. On leave the nav bar comes back and the status-icon
+  // appearance (changed by page theming below) is re-derived from the theme — a
+  // captured value would be stale if the theme flipped mid-game (uiMode no longer
+  // recreates the activity).
   DisposableEffect(Unit) {
     val window = context.findActivity()?.window
     val controller = window?.let { WindowCompat.getInsetsController(it, view) }
-    val originalLightStatusIcons = controller?.isAppearanceLightStatusBars ?: false
     window?.let { hideNavigationBar(it, view) }
     onDispose {
       controller?.run {
         show(WindowInsetsCompat.Type.navigationBars())
-        isAppearanceLightStatusBars = originalLightStatusIcons
+        isAppearanceLightStatusBars = themeLightBarIcons(context)
       }
     }
   }
@@ -281,8 +284,11 @@ private fun GameHostContent(
   }
 
   // Keep status-bar icons contrasting against the (possibly game-colored) bar strip.
+  // Also keyed on uiMode: a mid-game theme flip re-runs MainActivity.applyEdgeToEdge,
+  // which stomps this, so re-assert after it.
   val lightStatusIcons = barTarget.luminance() > 0.5f
-  LaunchedEffect(lightStatusIcons) {
+  val uiMode = LocalConfiguration.current.uiMode
+  LaunchedEffect(lightStatusIcons, uiMode) {
     context.findActivity()?.window?.let {
       WindowCompat.getInsetsController(it, view).isAppearanceLightStatusBars = lightStatusIcons
     }

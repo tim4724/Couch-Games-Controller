@@ -3,6 +3,7 @@ package com.couchgames.controller.ui.components
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.res.Configuration
 import android.view.View
 import android.view.Window
 import androidx.compose.foundation.layout.ColumnScope
@@ -113,3 +114,14 @@ tailrec fun Context.findActivity(): Activity? = when (this) {
   is ContextWrapper -> baseContext.findActivity()
   else -> null
 }
+
+/**
+ * The bar-icon appearance the current theme wants (what enableEdgeToEdge's auto
+ * style picks): dark icons on the light theme, light icons on the dark theme.
+ * Screens that force their own appearance (game host, scanner) restore THIS on
+ * exit rather than a captured value — uiMode no longer recreates the activity,
+ * so a value captured before a mid-overlay theme flip would be stale.
+ */
+fun themeLightBarIcons(context: Context): Boolean =
+  (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) !=
+    Configuration.UI_MODE_NIGHT_YES

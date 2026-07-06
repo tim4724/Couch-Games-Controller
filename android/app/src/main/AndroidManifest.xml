@@ -21,10 +21,15 @@
         android:theme="@style/Theme.CouchGames">
         <!-- Portrait-only for now — the home and every current game controller are
              portrait; revisit per-game when a landscape controller ships. -->
+        <!-- configChanges="uiMode": a dark-mode flip (incl. scheduled ones) must not
+             recreate the activity — that destroys the game-host WebView and bounces the
+             player's live relay socket. Compose re-themes via LocalConfiguration; the
+             system-bar icon contrast is re-applied in onConfigurationChanged. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
+            android:configChanges="uiMode"
             android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>

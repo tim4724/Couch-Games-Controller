@@ -1,6 +1,7 @@
 package com.couchgames.controller
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -27,21 +28,7 @@ class MainActivity : ComponentActivity() {
     // Only on a fresh start — don't replay the launching VIEW intent across rotation.
     if (savedInstanceState == null) pendingDeepLink = intent?.dataString
 
-    // Fully transparent system bars; icon contrast follows the system light/dark
-    // theme. The no-arg default only makes the STATUS bar transparent — the nav bar
-    // keeps a ~50% scrim (DefaultDarkScrim), so pass a transparent nav style too.
-    enableEdgeToEdge(
-      statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
-      navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
-    )
-    // enableEdgeToEdge disables the status bar's contrast scrim but leaves the nav
-    // bar's on (isNavigationBarContrastEnforced defaults true) — so in 3-button mode
-    // the nav bar tints as content scrolls under it while the status bar stays clear.
-    // Match them: neither bar draws a scrim, so content shows through both cleanly.
-    // (Our layouts keep the bar edges over dark chrome, so no legibility scrim needed.)
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-      window.isNavigationBarContrastEnforced = false
-    }
+    applyEdgeToEdge()
     setContent {
       CouchGamesTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -59,5 +46,31 @@ class MainActivity : ComponentActivity() {
     super.onNewIntent(intent)
     setIntent(intent)
     pendingDeepLink = intent.dataString
+  }
+
+  // uiMode is handled (manifest configChanges) so a dark-mode flip doesn't recreate
+  // the activity mid-game. Compose re-themes on its own; only the bar icon contrast
+  // was resolved at onCreate time and must be re-derived from the new configuration.
+  override fun onConfigurationChanged(newConfig: Configuration) {
+    super.onConfigurationChanged(newConfig)
+    applyEdgeToEdge()
+  }
+
+  // Fully transparent system bars; icon contrast follows the system light/dark
+  // theme. The no-arg default only makes the STATUS bar transparent — the nav bar
+  // keeps a ~50% scrim (DefaultDarkScrim), so pass a transparent nav style too.
+  private fun applyEdgeToEdge() {
+    enableEdgeToEdge(
+      statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
+      navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
+    )
+    // enableEdgeToEdge disables the status bar's contrast scrim but leaves the nav
+    // bar's on (isNavigationBarContrastEnforced defaults true) — so in 3-button mode
+    // the nav bar tints as content scrolls under it while the status bar stays clear.
+    // Match them: neither bar draws a scrim, so content shows through both cleanly.
+    // (Our layouts keep the bar edges over dark chrome, so no legibility scrim needed.)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+      window.isNavigationBarContrastEnforced = false
+    }
   }
 }

@@ -77,11 +77,13 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import com.couchgames.controller.R
+import com.couchgames.controller.BuildConfig
 import com.couchgames.controller.data.LAUNCHER_HOST
 import com.couchgames.controller.data.Profile
 import com.couchgames.controller.data.ProfileStore
 import com.couchgames.controller.data.RecentRoomStore
 import com.couchgames.controller.data.hostInDomain
+import com.couchgames.controller.data.isPrivateHost
 import com.couchgames.controller.theme.CouchGamesTheme
 import com.couchgames.controller.ui.components.PlayerChip
 import com.couchgames.controller.ui.components.findActivity
@@ -517,6 +519,8 @@ private class AllowListWebViewClient(
     val scheme = url.scheme?.lowercase()
     val host = url.host
     if (scheme == "https" && allowedDomains.any { hostInDomain(host, it) }) return false // load in-place
+    // Debug only: keep http(s) navigations to a LAN dev host in-app (see [isPrivateHost]).
+    if (BuildConfig.DEBUG && isPrivateHost(host) && (scheme == "http" || scheme == "https")) return false
     if (scheme == "http" || scheme == "https") openExternally(view.context, url) // off-list → browser
     return true // everything not explicitly allowed is blocked from the WebView
   }

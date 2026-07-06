@@ -2,6 +2,7 @@ package com.couchgames.controller.data
 
 import android.net.Uri
 import androidx.annotation.StringRes
+import com.couchgames.controller.BuildConfig
 import com.couchgames.controller.R
 
 /** The suite's canonical launcher domain (couch-games.com links, display fallback). */
@@ -12,6 +13,28 @@ fun hostInDomain(host: String?, domain: String): Boolean {
   val h = host?.lowercase() ?: return false
   val d = domain.lowercase()
   return h == d || h.endsWith(".$d")
+}
+
+/**
+ * A private/LAN host: an RFC-1918 IPv4 literal (10/8, 172.16/12, 192.168/16), loopback
+ * (127/8), link-local (169.254/16), "localhost", or an mDNS ".local" name. Debug builds
+ * relax the https-only join/navigation gates for these so a controller served off a dev
+ * machine on the local network (http://192.168.x.y:PORT/…) can be scanned and loaded;
+ * release builds ignore this entirely — public hosts are never matched here.
+ */
+fun isPrivateHost(host: String?): Boolean {
+  val h = host?.lowercase() ?: return false
+  if (h == "localhost" || h.endsWith(".local")) return true
+  val octets = h.split(".")
+  if (octets.size != 4) return false
+  val nums = octets.map { it.toIntOrNull() ?: return false }
+  if (nums.any { it !in 0..255 }) return false
+  val (a, b) = nums[0] to nums[1]
+  return a == 10 ||
+    (a == 172 && b in 16..31) ||
+    (a == 192 && b == 168) ||
+    a == 127 ||
+    (a == 169 && b == 254)
 }
 
 sealed interface JoinOutcome {
@@ -67,10 +90,13 @@ object JoinResolver {
     // deployment). The subdomain prefix names the game when it can ("tinytrack-…"),
     // purely for title/metadata — the scanned URL itself is what gets loaded.
     val game = games.firstOrNull { g -> g.hosts.any { hostInDomain(host, it) } }
-      ?: if (hostInDomain(host, LAUNCHER_HOST)) {
-        games.firstOrNull { host.lowercase().startsWith(it.id) } ?: launcherGame()
-      } else {
-        return JoinOutcome.Failure(R.string.error_not_couch_games_room)
+      ?: when {
+        hostInDomain(host, LAUNCHER_HOST) ->
+          games.firstOrNull { host.lowercase().startsWith(it.id) } ?: launcherGame()
+        // Debug only: a LAN dev server isn't any known game's host — load it as its
+        // own trusted controller so a locally served page can be tested end-to-end.
+        BuildConfig.DEBUG && isPrivateHost(host) -> launcherGame()
+        else -> return JoinOutcome.Failure(R.string.error_not_couch_games_room)
       }
     return joinVerbatim(s, uri, game)
   }
@@ -80,7 +106,11 @@ object JoinResolver {
   // and an https scheme with no embedded credentials; the room code is best-effort. The
   // scanned URL carries its own claim/instance, so there's nothing to re-attach here.
   private fun joinVerbatim(url: String, uri: Uri, game: Game): JoinOutcome {
-    if (!"https".equals(uri.scheme, ignoreCase = true) || !uri.userInfo.isNullOrEmpty()) {
+    val scheme = uri.scheme?.lowercase()
+    // https always; plain http only for a LAN host in debug (see [isPrivateHost]).
+    val schemeOk = scheme == "https" ||
+      (BuildConfig.DEBUG && scheme == "http" && isPrivateHost(uri.host))
+    if (!schemeOk || !uri.userInfo.isNullOrEmpty()) {
       return JoinOutcome.Failure(R.string.error_not_couch_games_room)
     }
     return JoinOutcome.Success(game, extractRoomCode(uri), url)

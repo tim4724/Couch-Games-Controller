@@ -43,6 +43,13 @@ enum JoinResolver {
         } else if hostInDomain(host, CG.launcherHost) {
             game = games.first(where: { lowerHost.hasPrefix($0.id) }) ?? Game.syntheticLauncher
         } else {
+            #if DEBUG
+            // Debug only: a LAN dev server isn't any known game's host — load it as its
+            // own trusted controller so a locally served page can be tested end-to-end.
+            if isPrivateHost(host) {
+                return joinVerbatim(url: trimmed, components: components, game: .syntheticLauncher)
+            }
+            #endif
             return .failure(message: String(localized: "That code isn’t a Couch Games room."))
         }
         return joinVerbatim(url: trimmed, components: components, game: game)
@@ -55,7 +62,13 @@ enum JoinResolver {
     /// and an https scheme with no embedded credentials; the room code is best-effort. The
     /// scanned URL carries its own claim/instance, so there's nothing to re-attach here.
     private static func joinVerbatim(url: String, components: URLComponents, game: Game) -> JoinOutcome {
-        guard components.scheme?.lowercased() == "https", (components.user ?? "").isEmpty else {
+        let scheme = components.scheme?.lowercased()
+        var schemeOk = scheme == "https"
+        #if DEBUG
+        // Plain http only for a LAN host in debug (see isPrivateHost).
+        schemeOk = schemeOk || (scheme == "http" && isPrivateHost(components.host))
+        #endif
+        guard schemeOk, (components.user ?? "").isEmpty else {
             return .failure(message: String(localized: "That code isn’t a Couch Games room."))
         }
         return .success(game: game, roomCode: extractRoomCode(components), joinUrl: url)

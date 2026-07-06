@@ -41,6 +41,13 @@ targets:
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         ITSAppUsesNonExemptEncryption: false
+        # ATS: permit cleartext only to local, non-routable hosts (localhost, *.local,
+        # RFC-1918 private IPv4 ranges) so a controller served off a dev machine on the
+        # LAN can load over http. Public hosts keep full ATS. This exception is inert in
+        # release: JoinResolver and the WebView navigation gate only ever produce an http
+        # LAN navigation under #if DEBUG, so a release build never exercises it.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
         NSCameraUsageDescription: "Couch Games uses the camera to scan the room QR code shown on your TV."
         UILaunchScreen:
           UIColorName: LaunchBackground

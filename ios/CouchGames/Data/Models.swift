@@ -180,6 +180,27 @@ func hostInDomain(_ host: String?, _ domain: String) -> Bool {
     return h == d || h.hasSuffix("." + d)
 }
 
+/// A private/LAN host: an RFC-1918 IPv4 literal (10/8, 172.16/12, 192.168/16), loopback
+/// (127/8), link-local (169.254/16), "localhost", or an mDNS ".local" name. Debug builds
+/// relax the https-only join/navigation gates for these so a controller served off a dev
+/// machine on the local network (http://192.168.x.y:PORT/…) can be scanned and loaded;
+/// release builds ignore this entirely — public hosts are never matched here.
+func isPrivateHost(_ host: String?) -> Bool {
+    guard let host else { return false }
+    let h = host.lowercased()
+    if h == "localhost" || h.hasSuffix(".local") { return true }
+    let octets = h.split(separator: ".", omittingEmptySubsequences: false).map { Int($0) }
+    guard octets.count == 4, octets.allSatisfy({ ($0 ?? -1) >= 0 && ($0 ?? -1) <= 255 }) else {
+        return false
+    }
+    let a = octets[0]!, b = octets[1]!
+    return a == 10
+        || (a == 172 && (16...31).contains(b))
+        || (a == 192 && b == 168)
+        || a == 127
+        || (a == 169 && b == 254)
+}
+
 /// Android Uri.encode semantics: percent-encode (UTF-8) everything EXCEPT A–Z a–z 0–9 _ - ! . ~ ' ( ) *
 func androidUriEncode(_ s: String) -> String {
     var out = ""

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug builds only (this lives in src/debug, so it never merges into release).
+
+  Lifts the platform's default cleartext block so a controller served off a dev
+  machine on the LAN (http://192.168.x.y:PORT/…) can be loaded in the WebView.
+  The network security config can't express IP ranges, so cleartext is permitted
+  broadly here; the actual join/navigation gates in JoinResolver and the WebView
+  client still restrict plain http to private/LAN hosts (see isPrivateHost) and
+  are themselves BuildConfig.DEBUG-gated. Release builds keep the https-only wall.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

@@ -168,6 +168,13 @@ struct GameWebView: UIViewRepresentable {
                 decisionHandler(.allow)
                 return
             }
+            #if DEBUG
+            // Debug only: keep http(s) navigations to a LAN dev host in-app (see isPrivateHost).
+            if (scheme == "http" || scheme == "https"), isPrivateHost(url.host) {
+                decisionHandler(.allow)
+                return
+            }
+            #endif
             if scheme == "http" || scheme == "https" {
                 // Off-list (plain http is never in-app, even on an allowed domain) → browser.
                 decisionHandler(.cancel)

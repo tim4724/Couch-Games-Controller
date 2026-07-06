@@ -25,6 +25,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
@@ -62,6 +63,12 @@ android {
       resources {
         excludes += "/META-INF/{AL2.0,LGPL2.1}"
       }
+    }
+
+    testOptions {
+      // Zero the device animation scales while instrumented tests run — sheets and
+      // dialogs settle instantly instead of racing the screenshot capture.
+      animationsDisabled = true
     }
 }
 
@@ -116,4 +123,10 @@ dependencies {
 
   // WebView compat — document-start script injection for the legal viewer.
   implementation(libs.androidx.webkit)
+
+  // Instrumented smoke test + store-screenshot capture (androidTest/StoreScreenshotTest.kt)
+  androidTestImplementation(platform(libs.androidx.compose.bom))
+  androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+  androidTestImplementation(libs.androidx.test.ext.junit)
+  androidTestImplementation(libs.androidx.espresso.core)
 }

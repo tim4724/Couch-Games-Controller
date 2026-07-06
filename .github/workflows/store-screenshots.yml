@@ -1,0 +1,155 @@
+# Runs the two store-screenshot smoke tests (Android emulator + iOS simulator) and
+# uploads the captured PNGs as artifacts. Doubles as the app's UI smoke check: each
+# test asserts the catalog, sheets, code gating, and About content before capturing.
+#
+# Screenshot geometry is chosen for store requirements:
+#   - Android: pixel_2 profile = 1080×1920 (16:9) — within Play's 2:1 aspect limit.
+#   - iOS: iPhone 17 Pro Max = 1320×2868 — App Store Connect's 6.9" display size.
+name: Store screenshots
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "android/**"
+      - "ios/**"
+      - "assets/**"
+      - ".github/workflows/store-screenshots.yml"
+  pull_request:
+    paths:
+      - "android/**"
+      - "ios/**"
+      - "assets/**"
+      - ".github/workflows/store-screenshots.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    name: Android (emulator)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Run screenshot UI test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2 # 1080×1920 — Play-compliant 16:9 phone screenshots
+          disable-animations: true
+          working-directory: android
+          script: |
+            # Demo-mode status bar: fixed clock, full battery, full signal, no notifications.
+            adb shell settings put global sysui_demo_allowed 1
+            adb shell am broadcast -a com.android.systemui.demo -e command enter
+            adb shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 0941
+            adb shell am broadcast -a com.android.systemui.demo -e command battery -e level 100 -e plugged false
+            adb shell am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level 4 -e fully true
+            adb shell am broadcast -a com.android.systemui.demo -e command notifications -e visible false
+            # The test publishes PNGs to shared storage (survives the post-test
+            # uninstall); clear leftovers so MediaStore can't dedupe-rename.
+            adb shell rm -rf /sdcard/Pictures/couchgames-screenshots
+            ./gradlew :app:connectedDebugAndroidTest
+            adb pull /sdcard/Pictures/couchgames-screenshots ../out
+            ls -la ../out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-android
+          path: out
+          if-no-files-found: error
+
+      - name: Upload test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-test-reports
+          path: android/app/build/reports
+          if-no-files-found: ignore
+
+  ios:
+    name: iOS (simulator)
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      DEVICE: iPhone 17 Pro Max # 6.9" — 1320×2868, App Store Connect's required size
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select latest Xcode 26
+        run: |
+          XCODE="$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)"
+          echo "Using $XCODE"
+          sudo xcode-select -s "$XCODE"
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: Boot simulator with a clean status bar
+        run: |
+          xcrun simctl boot "$DEVICE"
+          xcrun simctl bootstatus "$DEVICE" -b
+          xcrun simctl status_bar "$DEVICE" override \
+            --time "9:41" --batteryState charged --batteryLevel 100 \
+            --cellularMode active --cellularBars 4 --operatorName " " --wifiBars 3
+
+      - name: Run screenshot UI test
+        working-directory: ios
+        run: |
+          xcodebuild test \
+            -project CouchGames.xcodeproj \
+            -scheme CouchGames \
+            -destination "platform=iOS Simulator,name=$DEVICE" \
+            -resultBundlePath TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Export screenshots from the result bundle
+        run: |
+          xcrun xcresulttool export attachments --path ios/TestResults.xcresult --output-path out
+          # Exported files are UUID-named; manifest.json carries the attachment names.
+          python3 - <<'EOF'
+          import json, os
+          for test in json.load(open("out/manifest.json")):
+              for a in test["attachments"]:
+                  pretty = a["suggestedHumanReadableName"].split("_")[0] + ".png"
+                  os.rename(os.path.join("out", a["exportedFileName"]), os.path.join("out", pretty))
+          EOF
+          rm out/manifest.json
+          ls -la out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-ios
+          path: out
+          if-no-files-found: error
+
+      - name: Upload result bundle on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-test-results
+          path: ios/TestResults.xcresult
+          if-no-files-found: ignore

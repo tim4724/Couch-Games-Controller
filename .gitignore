@@ -21,3 +21,4 @@ ios/CouchGames.xcodeproj
 ios/build/
 ios/DerivedData/
 xcuserdata/
+*.xcresult

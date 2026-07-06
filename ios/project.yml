@@ -34,6 +34,9 @@ targets:
     #       - applinks:couch-games.com
     # AASA path pattern must be a single exactly-6-char path segment (rooms are 6 chars;
     # marketing pages fall through to the browser; JoinResolver rejects 6-char non-rooms at runtime).
+    scheme:
+      testTargets:
+        - CouchGamesUITests
     info:
       path: CouchGames/Info.plist
       properties:
@@ -64,3 +67,19 @@ targets:
           - CFBundleURLName: com.couchgames.controller
             CFBundleURLSchemes:
               - couchgames
+  # Smoke test + store-screenshot capture (see StoreScreenshotTests.swift).
+  CouchGamesUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: CouchGamesUITests
+    dependencies:
+      - target: CouchGames
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.couchgames.controller.uitests
+        SWIFT_VERSION: "5.10"
+        TEST_TARGET_NAME: CouchGames
+        GENERATE_INFOPLIST_FILE: true
+        CODE_SIGN_STYLE: Automatic

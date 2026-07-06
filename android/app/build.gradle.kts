@@ -83,9 +83,7 @@ aboutLibraries {
 }
 
 dependencies {
-  val composeBom = platform(libs.androidx.compose.bom)
-  implementation(composeBom)
-  androidTestImplementation(composeBom)
+  implementation(platform(libs.androidx.compose.bom))
 
   // Core Android dependencies
   implementation(libs.androidx.core.ktx)
@@ -109,24 +107,8 @@ dependencies {
 
   // Compose
   implementation(libs.androidx.compose.ui)
-  implementation(libs.androidx.compose.ui.tooling.preview)
   implementation(libs.androidx.compose.material3)
   implementation(libs.androidx.compose.material.icons.core)
-  // Tooling
-  debugImplementation(libs.androidx.compose.ui.tooling)
-  // Instrumented tests
-  androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-  debugImplementation(libs.androidx.compose.ui.test.manifest)
-
-  // Local tests: jUnit, coroutines, Android runner
-  testImplementation(libs.junit)
-  testImplementation(libs.kotlinx.coroutines.test)
-
-  // Instrumented tests: jUnit rules and runners
-  androidTestImplementation(libs.androidx.test.core)
-  androidTestImplementation(libs.androidx.test.ext.junit)
-  androidTestImplementation(libs.androidx.test.runner)
-  androidTestImplementation(libs.androidx.test.espresso.core)
 
   // Navigation
   implementation(libs.androidx.navigation3.ui)

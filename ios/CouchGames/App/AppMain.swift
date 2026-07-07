@@ -1,6 +1,5 @@
 import UIKit
 import SwiftUI
-import AVFAudio
 
 // MARK: - App delegate
 
@@ -8,10 +7,9 @@ import AVFAudio
 
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // .playback so WebView game sound is audible even with the silent switch on;
-        // .mixWithOthers so it layers over the user's music/podcasts instead of stopping
-        // them (the trailer is muted, so it stays silent regardless).
-        try? AVAudioSession.sharedInstance().setCategory(.playback, options: [.mixWithOthers])
+        // Audio-session setup lives in GameAudioSession (GameWebView.swift), paid on
+        // first game join — the call talks to the audio server (tens of ms) and
+        // nothing on the launch path plays sound.
         return true
     }
 }

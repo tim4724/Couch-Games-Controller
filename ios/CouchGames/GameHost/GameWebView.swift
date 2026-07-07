@@ -1,6 +1,53 @@
 import SwiftUI
 import WebKit
 import UIKit
+import AVFAudio
+
+/// Configures the shared audio session once, on first game host. Deferred out of
+/// didFinishLaunching: the call round-trips to the audio server (tens of ms) and
+/// nothing needs it until a controller page can play sound.
+enum GameAudioSession {
+    private static var configured = false
+
+    static func configureOnce() {
+        guard !configured else { return }
+        configured = true
+        // Off-main so the nav push into the game never drops frames on it; the page
+        // needs seconds of network + boot before it can make any sound, so the
+        // category is always set long before first playback.
+        DispatchQueue.global(qos: .userInitiated).async {
+            // .playback so WebView game sound is audible even with the silent switch
+            // on; .mixWithOthers so it layers over the user's music/podcasts instead
+            // of stopping them (the trailer is muted, so it stays silent regardless).
+            try? AVAudioSession.sharedInstance().setCategory(.playback, options: [.mixWithOthers])
+        }
+    }
+}
+
+/// Warms the web engine so the first game join doesn't pay WebContent/network
+/// process spawn (several hundred ms) on top of the network load. The blank view
+/// is retained — dropping it immediately would let its processes die — and
+/// released the moment a real game web view exists, since the engine (and
+/// WebKit's process cache) stays warm from then on. Mirrors Android's
+/// WebViewWarmer (ui/game/WebViewWarmer.kt).
+@MainActor enum WebViewWarmer {
+    private static var warmed: WKWebView?
+    private static var retired = false
+
+    /// Called post-launch, off the first-frame path (RootView.task).
+    static func warmUp() {
+        guard warmed == nil, !retired else { return }
+        let webView = WKWebView(frame: .zero)
+        webView.loadHTMLString("", baseURL: nil)
+        warmed = webView
+    }
+
+    /// A real game web view exists — reclaim the blank view's memory for good.
+    static func retire() {
+        retired = true
+        warmed = nil
+    }
+}
 
 /// The launcher-published safe zone, in points (CSS px == points on iOS).
 struct SafeZone: Equatable {
@@ -63,6 +110,9 @@ struct GameWebView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> CGWebView {
         let coordinator = context.coordinator
+
+        GameAudioSession.configureOnce()
+        WebViewWarmer.retire()
 
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true

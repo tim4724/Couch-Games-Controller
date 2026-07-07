@@ -31,3 +31,4 @@ plugins {
 
 rootProject.name = "Couch Games"
 include(":app")
+include(":baselineprofile")

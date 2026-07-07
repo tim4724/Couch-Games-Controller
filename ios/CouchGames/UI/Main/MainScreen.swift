@@ -26,7 +26,7 @@ struct MainScreen: View {
 
     // MARK: State
 
-    @State private var games: [Game] = GamesManifest.load()
+    @State private var games: [Game] = GamesManifest.games
     @State private var profile: Profile = ProfileStore.load()
     // Item-based presentation: values are snapshotted into the request at
     // present time. @State read inside a sheet/cover content closure is not

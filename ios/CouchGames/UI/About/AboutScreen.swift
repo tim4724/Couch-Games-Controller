@@ -21,7 +21,7 @@ struct AboutScreen: View {
                 Divider()
                 // The marketing site is a full website, not a legal doc, so it opens
                 // in the system browser rather than the in-app WebDocScreen viewer.
-                AboutRow(label: "couch-games.com") {
+                AboutRow(label: "couch-games.com", icon: "arrow.up.forward") {
                     if let url = URL(string: CG.websiteURL) { openURL(url) }
                 }
                 Divider()
@@ -42,6 +42,8 @@ struct AboutScreen: View {
 
 private struct AboutRow: View {
     let label: LocalizedStringKey
+    // "chevron.right" = pushes an in-app screen; external links pass "arrow.up.forward".
+    var icon: String = "chevron.right"
     let action: () -> Void
 
     @Environment(\.cgPalette) private var palette
@@ -53,7 +55,7 @@ private struct AboutRow: View {
                     .font(.cgBodyLarge)
                     .foregroundStyle(palette.onSurface)
                 Spacer()
-                Image(systemName: "chevron.right")
+                Image(systemName: icon)
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(.tertiary)
             }

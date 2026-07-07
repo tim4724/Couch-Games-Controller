@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bare ↗ external-link arrow, matching iOS's SF Symbol arrow.up.forward on the
+     same row. Hand-drawn at the optical size and 2dp stroke weight of the stock
+     KeyboardArrowRight chevron the other rows use — Material's own arrow_outward /
+     open_in_new glyphs fill the full 24dp box and read oversized next to it.
+     Three stroke rectangles: bracket top arm, bracket right arm, 45° shaft. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:autoMirrored="true"
+    android:tint="?attr/colorControlNormal">
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M10,7.5 H16.5 V9.5 H10 z
+M14.5,7.5 H16.5 V14 H14.5 z
+M7.49,15.09 L14.79,7.79 L16.21,9.21 L8.91,16.51 z"/>
+</vector>

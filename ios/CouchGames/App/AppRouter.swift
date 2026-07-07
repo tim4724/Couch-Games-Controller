@@ -52,6 +52,10 @@ enum Route: Hashable {
         // banner in the home rejoin slot, not a bottom overlay. (A load failure isn't a
         // session end: the host shows a retry overlay in place.)
         pop()
+        // A room that's gone can't be rejoined — drop the saved room now so the home
+        // rejoin card clears immediately instead of lingering until the liveness poll's
+        // relay record independently catches up (10s + relay lag).
+        if reason == "room_not_found" { RecentRoomStore.clear() }
         messages.showGameEndBanner(gameEndMessage(reason))
     }
 }

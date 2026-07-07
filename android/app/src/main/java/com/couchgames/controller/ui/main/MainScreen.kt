@@ -196,14 +196,23 @@ fun MainScreen(
   // no polling while backgrounded.
   LaunchedEffect(Unit) {
     lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-      val recent = RecentRoomStore.current() ?: return@repeatOnLifecycle
-      // No room code (the scanned URL didn't surface one) → we can't liveness-poll, so
-      // surface the card unverified. Tapping a dead room is handled by gameEnded.
-      if (recent.roomCode.isBlank()) {
-        rejoin = recent
-        return@repeatOnLifecycle
-      }
+      // Re-read the saved room EVERY iteration — never capture it once. A game that
+      // ended with room_not_found clears the store from under this still-running poll;
+      // the next tick must honor that and drop the card, not re-show the dead room off
+      // a stale captured value + a relay record that hasn't 404'd yet.
       while (true) {
+        val recent = RecentRoomStore.current()
+        if (recent == null) {
+          // No saved room (never joined, aged out, or cleared on a room_not_found end).
+          rejoin = null
+          return@repeatOnLifecycle
+        }
+        if (recent.roomCode.isBlank()) {
+          // No room code (the scanned URL didn't surface one) → we can't liveness-poll,
+          // so surface the card unverified. A dead room is handled by gameEnded.
+          rejoin = recent
+          return@repeatOnLifecycle
+        }
         when (RoomDirectory.lookup(recent.roomCode, recent.game.roomRelayBase)) {
           is RoomLookup.Found -> rejoin = recent
           RoomLookup.NotFound -> {
@@ -216,6 +225,14 @@ fun MainScreen(
         delay(10_000)
       }
     }
+  }
+
+  // A just-ended game (banner appeared) may have cleared the saved room — a
+  // room_not_found end drops it. Reflect the store the instant the banner lands so
+  // the rejoin card clears immediately, rather than lingering up to a poll tick (or
+  // being re-shown by a stale relay 'Found' while the record catches up).
+  LaunchedEffect(gameEndBanner) {
+    if (gameEndBanner != null) rejoin = RecentRoomStore.current()
   }
 
   // Games scroll the full screen; the join card floats over the list at the bottom.
@@ -273,6 +290,21 @@ fun MainScreen(
           Spacer(Modifier.height(with(LocalDensity.current) { joinCardHeightPx.toDp() } + 12.dp))
         }
       }
+      // Nav-area protection, the bottom counterpart of the status-bar strip:
+      // posters dissolve into the background before they reach the gesture zone,
+      // instead of ending in a hard cut under the pill. Drawn behind the (opaque)
+      // join card, so only the band below and beside the card actually shows.
+      val bottomInset = with(LocalDensity.current) { stableScreenInsets.getBottom(this).toDp() }
+      val fadeBase = MaterialTheme.colorScheme.background
+      Box(
+        Modifier
+          .align(Alignment.BottomCenter)
+          .fillMaxWidth()
+          .height(bottomInset + 56.dp)
+          // Fade from the background's own hue at zero alpha (not transparent
+          // black) so the mid-ramp doesn't darken light-theme posters.
+          .background(Brush.verticalGradient(0f to fadeBase.copy(alpha = 0f), 1f to fadeBase)),
+      )
       JoinCard(
         host = games.firstOrNull { it.isLive }?.displayHost ?: LAUNCHER_HOST,
         onScan = { requireName(AfterName.Scan) },

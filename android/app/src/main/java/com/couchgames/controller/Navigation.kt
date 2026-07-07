@@ -18,6 +18,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
+import com.couchgames.controller.data.RecentRoomStore
 import com.couchgames.controller.ui.about.AboutScreen
 import com.couchgames.controller.ui.about.LicensesScreen
 import com.couchgames.controller.ui.game.GameHostScreen
@@ -107,6 +108,10 @@ fun MainNavigation(deepLink: String? = null, onDeepLinkConsumed: () -> Unit = {}
           // session end: the host shows a retry overlay in place, not a pop.)
           onGameEnd = { reason ->
             backStack.removeLastOrNull()
+            // A room that's gone can't be rejoined — drop the saved room now so the
+            // home rejoin card clears immediately instead of lingering until the
+            // liveness poll's relay record independently catches up (10s + relay lag).
+            if (reason == "room_not_found") RecentRoomStore.clear()
             gameEndBanner = resources.getString(gameEndMessage(reason))
           },
         )

@@ -16,7 +16,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.couchgames.controller.BuildConfig
@@ -45,7 +47,13 @@ fun AboutScreen(
       HorizontalDivider()
       AboutRow(stringResource(R.string.open_source_licenses), onOpenLicenses)
       HorizontalDivider()
-      AboutRow("couch-games.com", onOpenWebsite)
+      // Leaves the app for the system browser, so it gets the external-link
+      // glyph instead of the in-app-navigation chevron.
+      AboutRow(
+        "couch-games.com",
+        onOpenWebsite,
+        icon = ImageVector.vectorResource(R.drawable.ic_arrow_outward),
+      )
 
       Spacer(Modifier.weight(1f))
 
@@ -61,7 +69,11 @@ fun AboutScreen(
 }
 
 @Composable
-private fun AboutRow(label: String, onClick: () -> Unit) {
+private fun AboutRow(
+  label: String,
+  onClick: () -> Unit,
+  icon: ImageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+) {
   Row(
     modifier = Modifier
       .fillMaxWidth()
@@ -70,6 +82,6 @@ private fun AboutRow(label: String, onClick: () -> Unit) {
     verticalAlignment = Alignment.CenterVertically,
   ) {
     Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+    Icon(icon, contentDescription = null)
   }
 }

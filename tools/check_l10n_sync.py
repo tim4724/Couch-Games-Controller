@@ -39,7 +39,6 @@ MANIFESTS = [
 # Android keys with no iOS counterpart, with the reason why.
 ANDROID_ONLY = {
     "back",              # iOS uses the system back affordance
-    "version_label",     # version footer: iOS appends the build number, so the formats differ
     "open_source_licenses",  # Android-only screen (iOS has no bundled licenses list)
     # CameraX scanner UI: iOS's AVFoundation scanner has its own copy (IOS_ONLY)
     "close_scanner",

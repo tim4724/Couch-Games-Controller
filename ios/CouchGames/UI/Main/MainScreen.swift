@@ -88,6 +88,23 @@ struct MainScreen: View {
                 .animation(.spring(duration: 0.45), value: messages.gameEndBanner)
             }
 
+            // Bottom protection, mirroring Android's nav-area fade: posters dissolve
+            // into the background before the home-indicator zone instead of ending in
+            // a hard cut beneath the join card. Fades from the background's own hue at
+            // zero alpha (not .clear) so the mid-ramp doesn't gray out light posters.
+            LinearGradient(
+                stops: [
+                    .init(color: palette.background.opacity(0), location: 0),
+                    .init(color: palette.background, location: 1)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 96)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+            .ignoresSafeArea(edges: .bottom)
+            .allowsHitTesting(false)
+
             JoinCard(
                 host: joinHost,
                 onScan: { requireName(.scan) },
@@ -156,6 +173,15 @@ struct MainScreen: View {
         .task(id: isTopVisible) {
             guard isTopVisible else { return }
             await runRejoinPoll()
+        }
+        .onChange(of: messages.gameEndBanner) { _, banner in
+            // A just-ended game (banner appeared) may have cleared the saved room — a
+            // room_not_found end drops it. Reflect the store the instant the banner
+            // lands so the rejoin card clears immediately, rather than lingering up to a
+            // poll tick (or being re-shown by a stale relay 'Found' while it catches up).
+            if banner != nil {
+                withAnimation(.spring(duration: 0.45)) { rejoin = RecentRoomStore.current() }
+            }
         }
         .alert("Enter room code", isPresented: $showCodeEntry) {
             TextField("e.g. A3KX9p", text: $codeText)
@@ -337,14 +363,22 @@ struct MainScreen: View {
 
     @MainActor
     private func runRejoinPoll() async {
-        guard let recent = RecentRoomStore.current() else { return }
-        // No room code (the scanned URL didn't surface one) → we can't liveness-poll, so
-        // surface the card unverified. Tapping a dead room is handled by gameEnded.
-        if recent.roomCode.isEmpty {
-            withAnimation(.spring(duration: 0.45)) { rejoin = recent }
-            return
-        }
+        // Re-read the saved room EVERY iteration — never capture it once. A game that
+        // ended with room_not_found clears the store from under this still-running poll;
+        // the next tick must honor that and drop the card, not re-show the dead room off
+        // a stale captured value + a relay record that hasn't 404'd yet.
         while !Task.isCancelled {
+            // No saved room (never joined, aged out, or cleared on a room_not_found end).
+            guard let recent = RecentRoomStore.current() else {
+                withAnimation(.spring(duration: 0.45)) { rejoin = nil }
+                return
+            }
+            // No room code (the scanned URL didn't surface one) → we can't liveness-poll,
+            // so surface the card unverified. A dead room is handled by gameEnded.
+            if recent.roomCode.isEmpty {
+                withAnimation(.spring(duration: 0.45)) { rejoin = recent }
+                return
+            }
             let result = await RoomDirectory.lookup(code: recent.roomCode, relayBase: recent.game.roomRelayBase)
             if Task.isCancelled { return }
             switch result {

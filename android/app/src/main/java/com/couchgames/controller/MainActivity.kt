@@ -17,6 +17,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.couchgames.controller.theme.CouchGamesTheme
+import com.couchgames.controller.ui.game.WebViewWarmer
 
 class MainActivity : ComponentActivity() {
   // The URL of a pending App Link, observed by the nav host. Null on a normal launch.
@@ -29,6 +30,8 @@ class MainActivity : ComponentActivity() {
     if (savedInstanceState == null) pendingDeepLink = intent?.dataString
 
     applyEdgeToEdge()
+    // Engine warm-up for the first game join; runs on a post-launch idle slot.
+    WebViewWarmer.schedule(this)
     setContent {
       CouchGamesTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {

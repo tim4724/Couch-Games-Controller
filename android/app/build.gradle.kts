@@ -3,6 +3,7 @@ import java.util.Properties
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.aboutlibraries)
+  alias(libs.plugins.baselineprofile)
   alias(libs.plugins.compose.compiler)
   alias(libs.plugins.kotlin.serialization)
 }
@@ -76,6 +77,12 @@ kotlin {
     jvmToolchain(17)
 }
 
+baselineProfile {
+    // Reorder the release dex so the classes in the startup profile (the generator's
+    // startup() journey) sit contiguously — fewer page faults on cold start.
+    dexLayoutOptimization = true
+}
+
 // Attribution list generation. Only collect the release classpath (what actually
 // ships — drops debug/test-only tooling like ui-tooling, ui-test-manifest), and
 // merge duplicate artifacts that resolve to the same library.
@@ -96,6 +103,12 @@ dependencies {
   implementation(libs.androidx.core.ktx)
   implementation(libs.androidx.lifecycle.runtime.ktx)
   implementation(libs.androidx.activity.compose)
+
+  // Baseline profile: profileinstaller compiles the checked-in profile into ART on
+  // install/first run; :baselineprofile is the generator (see that module's README
+  // header comment for how to regenerate).
+  implementation(libs.androidx.profileinstaller)
+  baselineProfile(project(":baselineprofile"))
 
   // QR scanning — in-app CameraX preview + bundled ML Kit barcode model. Bundled
   // (vs Play Services code scanner) so scanning works without Google Play Services

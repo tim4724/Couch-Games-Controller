@@ -172,6 +172,13 @@ struct RootView: View {
                 ChromeState.shared.reset()
             }
         }
+        .task {
+            // Warm the web engine for the first game join, once launch has settled.
+            // A join can't realistically happen this early (it needs a scan or typed
+            // code), and if one does, retire() makes this a no-op.
+            try? await Task.sleep(for: .seconds(1))
+            WebViewWarmer.warmUp()
+        }
     }
 }
 

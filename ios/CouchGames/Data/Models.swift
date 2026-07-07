@@ -86,6 +86,12 @@ enum GamesManifest {
 
     private struct ParseError: Error {}
 
+    /// The bundled manifest, parsed once per process. Use this instead of `load()`
+    /// in view code: a `@State` default expression re-evaluates on every struct
+    /// init (each NavigationStack push/pop re-creates MainScreen), and the bundle
+    /// can't change mid-run — so re-reading the file would be pure waste.
+    static let games: [Game] = load()
+
     /// Loads "games-manifest.json" from the bundle. All-or-nothing: ANY failure → [].
     static func load(bundle: Bundle = .main) -> [Game] {
         do {

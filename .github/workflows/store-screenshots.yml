@@ -5,9 +5,10 @@
 # Screenshot geometry is chosen for store requirements (phone-only by choice —
 # the app isn't a good tablet experience, so no Play tablet sets):
 #   - Android: pixel_2 = 1080×1920 (16:9) — within Play's 2:1 aspect limit.
-#   - iOS: iPhone 17 Pro Max = 1320×2868 — App Store Connect's 6.9" display size,
-#     the only required one: smaller iPhones auto-scale from it, and the app is
-#     iPhone-only (TARGETED_DEVICE_FAMILY 1) so no iPad set is needed.
+#   - iOS: iPhone 17 Pro Max = 1320×2868 (App Store Connect's 6.9" display size)
+#     and iPhone 14 Plus = 1284×2778 (the 6.5" slot — the only one ASC offered this
+#     app record, so it gets a native capture rather than ASC auto-scaling). The app
+#     is iPhone-only (TARGETED_DEVICE_FAMILY 1), so no iPad set is needed.
 name: Store screenshots
 
 on:
@@ -86,11 +87,19 @@ jobs:
           if-no-files-found: ignore
 
   ios:
-    name: iOS (simulator)
+    name: iOS ${{ matrix.size }} (simulator)
     runs-on: macos-15
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - size: 6.9-inch
+            device: iPhone 17 Pro Max # 1320×2868
+          - size: 6.5-inch
+            device: iPhone 14 Plus # 1284×2778
     env:
-      DEVICE: iPhone 17 Pro Max # 6.9" — 1320×2868, App Store Connect's required size
+      DEVICE: ${{ matrix.device }}
     steps:
       - uses: actions/checkout@v7
 
@@ -113,6 +122,11 @@ jobs:
 
       - name: Boot simulator with a clean status bar
         run: |
+          # Runner images only pre-create current-generation simulators — older
+          # device types (iPhone 14 Plus) must be created first.
+          if ! xcrun simctl list devices available | grep -q "$DEVICE ("; then
+            xcrun simctl create "$DEVICE" "$DEVICE"
+          fi
           xcrun simctl boot "$DEVICE"
           xcrun simctl bootstatus "$DEVICE" -b
           xcrun simctl status_bar "$DEVICE" override \
@@ -150,7 +164,7 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: com.couch-games.controller-screenshots-ios
+          name: com.couch-games.controller-screenshots-ios-${{ matrix.size }}
           path: out
           if-no-files-found: error
 
@@ -158,6 +172,6 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: ios-test-results
+          name: ios-test-results-${{ matrix.size }}
           path: ios/TestResults.xcresult
           if-no-files-found: ignore

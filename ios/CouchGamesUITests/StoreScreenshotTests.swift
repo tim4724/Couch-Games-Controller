@@ -116,7 +116,16 @@ final class StoreScreenshotTests: XCTestCase {
             NSPredicate(format: "label BEGINSWITH 'Joining'")
         ).firstMatch
         XCTAssertTrue(joining.waitForNonExistence(timeout: 30))
-        Thread.sleep(forTimeInterval: 3) // fonts + touchpad canvas settle
+        // The cover fades on page load, not first paint — on a cold simulator (the
+        // dark pass runs first) the harness JS renders seconds later, which used to
+        // capture a blank WebView. The ping readout ("42 ms") is the only page text
+        // WKWebView exposes to XCUITest (the player name and gesture legend stay
+        // hidden), and the harness JS renders it with the rest of the touchpad UI.
+        let ping = app.webViews.staticTexts.matching(
+            NSPredicate(format: "label ENDSWITH ' ms'")
+        ).firstMatch
+        XCTAssertTrue(ping.waitForExistence(timeout: 30))
+        Thread.sleep(forTimeInterval: 1) // fonts + touchpad canvas settle
         snap("06-in-game-\(suffix)")
     }
 

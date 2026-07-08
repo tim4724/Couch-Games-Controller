@@ -2,9 +2,12 @@
 # uploads the captured PNGs as artifacts. Doubles as the app's UI smoke check: each
 # test asserts the catalog, sheets, code gating, and About content before capturing.
 #
-# Screenshot geometry is chosen for store requirements:
-#   - Android: pixel_2 profile = 1080×1920 (16:9) — within Play's 2:1 aspect limit.
-#   - iOS: iPhone 17 Pro Max = 1320×2868 — App Store Connect's 6.9" display size.
+# Screenshot geometry is chosen for store requirements (phone-only by choice —
+# the app isn't a good tablet experience, so no Play tablet sets):
+#   - Android: pixel_2 = 1080×1920 (16:9) — within Play's 2:1 aspect limit.
+#   - iOS: iPhone 17 Pro Max = 1320×2868 — App Store Connect's 6.9" display size,
+#     the only required one: smaller iPhones auto-scale from it, and the app is
+#     iPhone-only (TARGETED_DEVICE_FAMILY 1) so no iPad set is needed.
 name: Store screenshots
 
 on:
@@ -147,7 +150,7 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: com.couchgames.controller-screenshots-ios
+          name: com.couch-games.controller-screenshots-ios
           path: out
           if-no-files-found: error
 

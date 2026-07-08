@@ -80,7 +80,7 @@ struct GameWebView: UIViewRepresentable {
     let allowedDomains: [String]       // already lowercased, includes CG.launcherHost
     let playerName: String             // "" = blank → never injected
     let safeZone: SafeZone             // points == CSS px
-    let onLoaded: () -> Void           // every didFinish
+    let onLoaded: () -> Void           // first painted frame (__firstFrame signal, or didFinish+3s fallback)
     let onGameEnd: (String?) -> Void   // fire-once
     @Binding var failed: Bool          // main-doc load failed — drives the retry overlay
     let reloadToken: Int               // bumped by Retry → re-issue the join request
@@ -121,6 +121,9 @@ struct GameWebView: UIViewRepresentable {
         // The bridge must exist before load or the page won't see it.
         config.userContentController.addUserScript(
             WKUserScript(source: GameHostJS.bridgeShim, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+        )
+        config.userContentController.addUserScript(
+            WKUserScript(source: GameHostJS.firstFrameSignal, injectionTime: .atDocumentStart, forMainFrameOnly: true)
         )
         config.userContentController.add(coordinator, name: "cgHost")
 
@@ -273,11 +276,16 @@ struct GameWebView: UIViewRepresentable {
             DispatchQueue.main.async { self.parent.failed = true }
         }
 
-        /// Every page finish: loading done, then re-assert the name
-        /// (belt-and-suspenders with cgName), re-install the theme observer
-        /// (idempotent), re-push the safe zone.
+        /// Every page finish: re-assert the name (belt-and-suspenders with cgName),
+        /// re-install the theme observer (idempotent), re-push the safe zone.
+        /// The cover fade (onLoaded) is normally driven by the injected __firstFrame
+        /// signal — the page has actually rendered by then, where didFinish only means
+        /// "loaded" and can precede first paint by seconds on a cold start. The delayed
+        /// call here is a fallback so the cover can't strand if the signal never comes.
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            parent.onLoaded()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+                self?.parent.onLoaded()
+            }
             if let js = GameHostJS.nameInjection(name: parent.playerName) {
                 webView.evaluateJavaScript(js, completionHandler: nil)
             }
@@ -325,6 +333,10 @@ struct GameWebView: UIViewRepresentable {
                   let type = body["type"] as? String
             else { return }
             switch type {
+            case "__firstFrame":
+                // Launcher-injected (firstFrameSignal), not a contract message: the
+                // page's first composited frame is up — fade the "Joining…" cover.
+                parent.onLoaded()
             case "gameEnded":
                 guard !didEnd else { return }
                 didEnd = true

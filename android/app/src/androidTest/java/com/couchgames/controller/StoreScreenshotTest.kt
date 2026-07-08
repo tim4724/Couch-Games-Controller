@@ -25,8 +25,6 @@ import androidx.compose.ui.test.performTextInput
 import androidx.core.net.toUri
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso
-import android.graphics.Color
-import android.os.SystemClock
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.couchgames.controller.data.Profile
@@ -183,51 +181,11 @@ class StoreScreenshotTest {
       compose.waitUntil(timeoutMillis = 30_000) {
         compose.onAllNodes(hasText(joiningPrefix, substring = true)).fetchSemanticsNodes().isEmpty()
       }
-      // The cover fades on page load, not first paint — on a cold start the harness
-      // JS renders seconds later (a blank capture). The WebView exposes no virtual
-      // a11y tree to instrumentation (verified empty in uiautomator dumps), so wait
-      // for the paint itself: rows crossing the touchpad get a wide luminance spread
-      // from its border/legend, which the blank background (flat or a smooth
-      // vertical gradient, i.e. uniform per row) can't produce.
-      waitForWebPaint()
+      // The shell fades the cover on WebView's visual-state callback, so the cover
+      // being gone means the page has actually been drawn (not merely loaded).
       Thread.sleep(1_000) // fonts + touchpad canvas settle
       screenshot("06-in-game-$suffix")
     }
-  }
-
-  /** Poll full-device captures until the web content area shows real paint. */
-  private fun waitForWebPaint() {
-    val deadline = SystemClock.uptimeMillis() + 30_000
-    while (true) {
-      val bitmap = instrumentation.uiAutomation.takeScreenshot()
-      if (bitmap != null && hasWebPaint(bitmap)) return
-      check(SystemClock.uptimeMillis() < deadline) { "controller page never painted" }
-      Thread.sleep(500)
-    }
-  }
-
-  private fun hasWebPaint(raw: Bitmap): Boolean {
-    // takeScreenshot may hand back a HARDWARE bitmap, which forbids getPixel.
-    val bitmap = if (raw.config == Bitmap.Config.HARDWARE) raw.copy(Bitmap.Config.ARGB_8888, false) else raw
-    // Sample rows in the lower 60% (native chrome stays above): a row is
-    // "contentful" if its luminance spread exceeds what a flat background or a
-    // smooth vertical gradient (uniform within a row) can produce.
-    var contentRows = 0
-    for (fraction in floatArrayOf(0.45f, 0.55f, 0.65f, 0.75f, 0.85f)) {
-      val y = (bitmap.height * fraction).toInt()
-      var minLum = 255
-      var maxLum = 0
-      var x = 0
-      while (x < bitmap.width) {
-        val c = bitmap.getPixel(x, y)
-        val lum = (Color.red(c) + Color.green(c) + Color.blue(c)) / 3
-        if (lum < minLum) minLum = lum
-        if (lum > maxLum) maxLum = lum
-        x += 4
-      }
-      if (maxLum - minLum > 40) contentRows++
-    }
-    return contentRows >= 2
   }
 
   private fun waitForText(text: String) {

@@ -84,6 +84,26 @@ enum GameHostJS {
     })();
     """
 
+    /// Document-start user script (main frame only): posts one `__firstFrame` after
+    /// the load event plus two rAF turns — i.e. once the compositor has actually
+    /// produced a frame with the page's content. Drives the "Joining…" cover fade
+    /// (WKWebView has no native first-paint callback). Launcher-injected and NOT part
+    /// of the contract: games never send it, and a page spoofing it merely fades the
+    /// cover early — the pre-fix behavior.
+    static let firstFrameSignal = """
+    (function () {
+      function signal() {
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            try { window.webkit.messageHandlers.cgHost.postMessage({ type: '__firstFrame' }); } catch (e) {}
+          });
+        });
+      }
+      if (document.readyState === 'complete') { signal(); }
+      else { window.addEventListener('load', signal, { once: true }); }
+    })();
+    """
+
     /// The theme-meta observer, evaluated after each page load. Pushes the metas'
     /// state through `CouchGamesHost.themeChanged` immediately and on every change —
     /// head mutations via MutationObserver, plus scheme flips (a `media` attribute

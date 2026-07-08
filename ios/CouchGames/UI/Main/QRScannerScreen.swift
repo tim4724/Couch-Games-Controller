@@ -115,7 +115,7 @@ private struct CameraPreview: UIViewRepresentable {
         var onFailure: (String) -> Void
 
         let session = AVCaptureSession()
-        private let sessionQueue = DispatchQueue(label: "com.couchgames.controller.qr-session")
+        private let sessionQueue = DispatchQueue(label: "com.couch-games.controller.qr-session")
         private var configured = false
         private var didEmit = false
 

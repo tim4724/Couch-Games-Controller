@@ -16,7 +16,7 @@ targets:
         buildPhase: resources
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.couchgames.controller
+        PRODUCT_BUNDLE_IDENTIFIER: com.couch-games.controller
         PRODUCT_NAME: CouchGames
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: 1
@@ -25,6 +25,7 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         GENERATE_INFOPLIST_FILE: false
         CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 5ZH48MPAM3 # survives xcodegen regeneration; Xcode-pane picks don't
     # TODO(associated-domains): when Universal Links go live, add an entitlements file:
     # entitlements:
     #   path: CouchGames/CouchGames.entitlements
@@ -74,7 +75,7 @@ targets:
       - target: CouchGames
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.couchgames.controller.uitests
+        PRODUCT_BUNDLE_IDENTIFIER: com.couch-games.controller.uitests
         SWIFT_VERSION: "5.10"
         TEST_TARGET_NAME: CouchGames
         GENERATE_INFOPLIST_FILE: true

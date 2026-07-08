@@ -602,12 +602,14 @@ private class AllowListWebViewClient(
   // Fade the cover on the first DRAW of the loaded page, not on load: the page's JS
   // can paint noticeably after onPageFinished (seconds, on a cold start), which used
   // to reveal a blank WebView. postVisualStateCallback fires once this DOM state has
-  // actually been rendered; the postDelayed is a fallback so the cover can't strand.
+  // actually been rendered. Deliberately no time-based fallback — fading the cover
+  // before content exists is the bug, not a safety net (a stalled page keeps the
+  // honest spinner and Leave stays available; load failures surface the retry cover
+  // via onReceivedError/onReceivedHttpError).
   override fun onPageFinished(view: WebView, url: String) {
     view.postVisualStateCallback(0, object : WebView.VisualStateCallback() {
       override fun onComplete(requestId: Long) = onLoaded()
     })
-    view.postDelayed({ onLoaded() }, 3_000)
   }
 
   private fun openExternally(context: Context, uri: Uri) {

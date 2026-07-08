@@ -85,22 +85,26 @@ enum GameHostJS {
     """
 
     /// Document-start user script (main frame only): posts one `__firstFrame` after
-    /// the load event plus two rAF turns — i.e. once the compositor has actually
+    /// DOMContentLoaded plus two rAF turns — i.e. once the compositor has actually
     /// produced a frame with the page's content. Drives the "Joining…" cover fade
-    /// (WKWebView has no native first-paint callback). Launcher-injected and NOT part
-    /// of the contract: games never send it, and a page spoofing it merely fades the
-    /// cover early — the pre-fix behavior.
+    /// (WKWebView has no native first-paint callback). DOMContentLoaded, not load: a
+    /// hanging subresource must not keep the cover up after the UI has rendered. The
+    /// handler reference is captured before any page code runs, so a page clobbering
+    /// `window.webkit` can't break the signal. Launcher-injected and NOT part of the
+    /// contract: games never send it, and a page spoofing it merely fades the cover
+    /// early — the pre-fix behavior.
     static let firstFrameSignal = """
     (function () {
+      var handler = window.webkit.messageHandlers.cgHost;
       function signal() {
         requestAnimationFrame(function () {
           requestAnimationFrame(function () {
-            try { window.webkit.messageHandlers.cgHost.postMessage({ type: '__firstFrame' }); } catch (e) {}
+            try { handler.postMessage({ type: '__firstFrame' }); } catch (e) {}
           });
         });
       }
-      if (document.readyState === 'complete') { signal(); }
-      else { window.addEventListener('load', signal, { once: true }); }
+      if (document.readyState !== 'loading') { signal(); }
+      else { document.addEventListener('DOMContentLoaded', signal, { once: true }); }
     })();
     """
 

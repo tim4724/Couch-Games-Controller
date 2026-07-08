@@ -80,7 +80,7 @@ struct GameWebView: UIViewRepresentable {
     let allowedDomains: [String]       // already lowercased, includes CG.launcherHost
     let playerName: String             // "" = blank → never injected
     let safeZone: SafeZone             // points == CSS px
-    let onLoaded: () -> Void           // first painted frame (__firstFrame signal, or didFinish+3s fallback)
+    let onLoaded: () -> Void           // first painted frame (the injected __firstFrame signal)
     let onGameEnd: (String?) -> Void   // fire-once
     @Binding var failed: Bool          // main-doc load failed — drives the retry overlay
     let reloadToken: Int               // bumped by Retry → re-issue the join request
@@ -278,14 +278,14 @@ struct GameWebView: UIViewRepresentable {
 
         /// Every page finish: re-assert the name (belt-and-suspenders with cgName),
         /// re-install the theme observer (idempotent), re-push the safe zone.
-        /// The cover fade (onLoaded) is normally driven by the injected __firstFrame
-        /// signal — the page has actually rendered by then, where didFinish only means
-        /// "loaded" and can precede first paint by seconds on a cold start. The delayed
-        /// call here is a fallback so the cover can't strand if the signal never comes.
+        /// Deliberately does NOT touch the cover: its fade is driven solely by the
+        /// injected __firstFrame signal, because didFinish means "loaded" and can
+        /// precede first paint by seconds on a cold start. No time-based fallback
+        /// either — one fading the cover before content exists is the bug, not a
+        /// safety net (a stalled page keeps the honest spinner, and Leave stays
+        /// available in the chrome above it; load failures surface the retry cover
+        /// through the error callbacks).
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
-                self?.parent.onLoaded()
-            }
             if let js = GameHostJS.nameInjection(name: parent.playerName) {
                 webView.evaluateJavaScript(js, completionHandler: nil)
             }

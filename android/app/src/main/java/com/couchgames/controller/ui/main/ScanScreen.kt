@@ -10,10 +10,8 @@ import android.util.Size
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.core.resolutionselector.ResolutionStrategy
-import androidx.camera.mlkit.vision.MlKitAnalyzer
 import androidx.camera.view.LifecycleCameraController
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.AnimatedVisibility
@@ -88,16 +86,15 @@ import com.couchgames.controller.data.JoinResolver
 import com.couchgames.controller.ui.components.findActivity
 import com.couchgames.controller.ui.components.stableScreenInsets
 import com.couchgames.controller.ui.components.themeLightBarIcons
-import com.google.mlkit.vision.barcode.BarcodeScannerOptions
-import com.google.mlkit.vision.barcode.BarcodeScanning
-import com.google.mlkit.vision.barcode.common.Barcode
+import java.util.concurrent.Executors
 import kotlinx.coroutines.delay
+import zxingcpp.BarcodeReader
 
 /**
- * In-app QR scanner: full-bleed CameraX preview decoded on-device by the bundled
- * ML Kit model. In-app (vs the Play Services code-scanner activity) so scanning
- * works without Play Services, opens instantly with no first-use module download,
- * and keeps the manual-entry fallback one tap away on the same screen.
+ * In-app QR scanner: full-bleed CameraX preview decoded on-device by zxing-cpp —
+ * no Play Services dependency, no telemetry, camera frames never leave the
+ * process. In-app (vs a scanner activity) so it opens instantly and keeps the
+ * manual-entry fallback one tap away on the same screen.
  *
  * A decoded QR resolves through [JoinResolver] right here: a bad code shows an
  * inline banner and scanning continues — the player never gets bounced out to
@@ -305,37 +302,57 @@ private fun CameraPreview(
   val controller = remember {
     LifecycleCameraController(context).apply {
       // Analysis defaults to ~640x480 — too coarse for a QR scanned from across
-      // the couch. 720p decodes reliably without burning the battery.
+      // the couch (a ~25 cm code at 3 m is only ~3 px/module even at 720p). 1080p
+      // gives ~4.5 px/module of headroom; going beyond it isn't guaranteed to
+      // combine with a preview stream on LIMITED-hardware devices.
       imageAnalysisResolutionSelector = ResolutionSelector.Builder()
         .setResolutionStrategy(
-          ResolutionStrategy(Size(1280, 720), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER),
+          ResolutionStrategy(Size(1920, 1080), ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER),
         )
         .build()
     }
   }
 
   DisposableEffect(Unit) {
-    val scanner = BarcodeScanning.getClient(
-      BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).build(),
+    // read() is synchronous CPU work — keep it off the main thread. The
+    // controller's KEEP_ONLY_LATEST backpressure drops frames while a decode is
+    // in flight, so a slow frame lowers the scan rate instead of queueing work.
+    val decodeExecutor = Executors.newSingleThreadExecutor()
+    val mainExecutor = ContextCompat.getMainExecutor(context)
+    val reader = BarcodeReader(
+      BarcodeReader.Options(
+        formats = setOf(BarcodeReader.Format.QR_CODE),
+        // The extra passes mostly cost time on frames the plain pass can't decode
+        // anyway: tryHarder finds small codes scanned from across the couch,
+        // tryInvert light-on-dark codes from dark-themed games, tryDownscale
+        // oversized close-ups.
+        tryHarder = true,
+        tryInvert = true,
+        tryDownscale = true,
+        // Raw payload exactly as encoded — what JoinResolver expects.
+        textMode = BarcodeReader.TextMode.PLAIN,
+      ),
     )
-    val executor = ContextCompat.getMainExecutor(context)
-    controller.setImageAnalysisAnalyzer(
-      executor,
-      // We never draw on the barcode's position, so original coordinates are fine.
-      MlKitAnalyzer(listOf(scanner), ImageAnalysis.COORDINATE_SYSTEM_ORIGINAL, executor) { result ->
-        val raws = result.getValue(scanner)?.mapNotNull { it.rawValue } ?: return@MlKitAnalyzer
-        if (raws.isNotEmpty()) onQr(raws)
-      },
-    )
+    controller.setImageAnalysisAnalyzer(decodeExecutor) { image ->
+      // read() decodes straight out of the frame's Y plane via JNI (no copy, no
+      // bitmap); use{} closes the proxy right after so CameraX can reuse the
+      // buffer. Idle frames allocate nothing beyond the reader's result list,
+      // and the main thread is only touched when a code was actually decoded.
+      val results = image.use { reader.read(it) }
+      if (results.isNotEmpty()) {
+        val texts = results.mapNotNull { it.text }
+        if (texts.isNotEmpty()) mainExecutor.execute { onQr(texts) }
+      }
+    }
     controller.bindToLifecycle(lifecycleOwner)
     // cameraInfo is null until the async bind completes — probe when it has.
     controller.initializationFuture.addListener(
       { onTorchProbed(controller.cameraInfo?.hasFlashUnit() == true) },
-      executor,
+      mainExecutor,
     )
     onDispose {
       controller.unbind()
-      scanner.close()
+      decodeExecutor.shutdown()
     }
   }
   LaunchedEffect(torchOn) { controller.enableTorch(torchOn) }

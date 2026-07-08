@@ -30,8 +30,8 @@ echo "sdk.dir=$HOME/Library/Android/sdk" > local.properties   # once per checkou
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-QR scanning is an in-app CameraX + ML Kit scanner (CAMERA permission, with
-manual room-code entry as the fallback).
+QR scanning is an in-app CameraX + zxing-cpp scanner — fully on-device, no
+telemetry (CAMERA permission, with manual room-code entry as the fallback).
 
 ## iOS: build & run
 

@@ -110,14 +110,13 @@ dependencies {
   implementation(libs.androidx.profileinstaller)
   baselineProfile(project(":baselineprofile"))
 
-  // QR scanning — in-app CameraX preview + bundled ML Kit barcode model. Bundled
-  // (vs Play Services code scanner) so scanning works without Google Play Services
-  // and without a first-use module download; see ScanScreen.kt.
+  // QR scanning — in-app CameraX preview decoded by zxing-cpp. Fully on-device
+  // and telemetry-free (unlike ML Kit), works without Google Play Services, and
+  // opens instantly with no first-use module download; see ScanScreen.kt.
   implementation(libs.androidx.camera.camera2)
   implementation(libs.androidx.camera.lifecycle)
   implementation(libs.androidx.camera.view)
-  implementation(libs.androidx.camera.mlkit.vision)
-  implementation(libs.mlkit.barcode.scanning)
+  implementation(libs.zxingcpp.android)
 
   // Open-source license list (About screen)
   implementation(libs.aboutlibraries.compose.m3)

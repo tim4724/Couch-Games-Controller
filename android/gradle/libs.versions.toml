@@ -12,11 +12,11 @@ benchmark = "1.5.0-alpha07"
 camerax = "1.6.1"
 espressoCore = "3.7.0"
 kotlin = "2.4.0"
-mlkitBarcode = "17.3.0"
 nav3Core = "1.1.4"
 profileinstaller = "1.4.1"
 uiautomator = "2.4.0"
 webkit = "1.12.1"
+zxingCpp = "3.1.0"
 
 [libraries]
 # Open-source license list — the Gradle plugin generates R.raw.aboutlibraries at
@@ -38,14 +38,13 @@ androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtim
 androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camerax" }
 androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camerax" }
 androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "camerax" }
-androidx-camera-mlkit-vision = { module = "androidx.camera:camera-mlkit-vision", version.ref = "camerax" }
 androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "nav3Core" }
 androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "nav3Core" }
 # Document-start script injection for the legal WebView (feature-gated at runtime).
 androidx-webkit = { module = "androidx.webkit:webkit", version.ref = "webkit" }
-# Bundled (not Play Services "unbundled") on purpose: the scanner must work on
-# devices without Google Play Services, at the cost of ~3 MB APK.
-mlkit-barcode-scanning = { module = "com.google.mlkit:barcode-scanning", version.ref = "mlkitBarcode" }
+# On-device QR decoding with no Google Play Services dependency and no telemetry
+# (native zxing-cpp; ships one small .so per ABI).
+zxingcpp-android = { module = "io.github.zxing-cpp:android", version.ref = "zxingCpp" }
 # Installs the checked-in baseline profile into ART at install time (Play) / first
 # run, so cold starts run AOT-compiled code before cloud profiles arrive.
 androidx-profileinstaller = { module = "androidx.profileinstaller:profileinstaller", version.ref = "profileinstaller" }

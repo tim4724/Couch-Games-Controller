@@ -141,11 +141,15 @@ jobs:
       - name: Run screenshot UI test
         working-directory: ios
         run: |
+          # retry-tests-on-failure absorbs simulator-infrastructure flakes
+          # (kAXErrorIPCTimeout etc.) that hit cold, freshly-created simulators on
+          # slow runners — the retry runs against a warmed-up simulator.
           xcodebuild test \
             -project CouchGames.xcodeproj \
             -scheme CouchGames \
             -destination "platform=iOS Simulator,name=$DEVICE" \
             -resultBundlePath TestResults.xcresult \
+            -retry-tests-on-failure -test-iterations 3 \
             CODE_SIGNING_ALLOWED=NO
 
       - name: Export screenshots from the result bundle

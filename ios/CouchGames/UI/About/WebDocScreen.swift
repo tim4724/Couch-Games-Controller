@@ -80,13 +80,36 @@ private struct WebDocView: UIViewRepresentable {
     // The page renders its own <h1> title (e.g. "DATENSCHUTZERKLÄRUNG"); in-app the
     // native nav bar already shows it, so hide the page copy to avoid the duplicate.
     // Injected at document-start so the heading never flashes before it's hidden.
+    //
+    // The page ships a strict CSP (style-src 'self'), so an injected inline <style>
+    // element is rejected by the browser and never applies. A constructable
+    // stylesheet is a pure CSSOM object — exempt from CSP — and still covers nodes
+    // added after injection. Older WebViews without it fall back to setting the
+    // style directly on each heading via the CSSOM (also CSP-exempt).
     private static let hideHeadingJS = """
     (function () {
-      if (document.getElementById('cg-hide-heading')) return;
-      var s = document.createElement('style');
-      s.id = 'cg-hide-heading';
-      s.textContent = '.legal-shell > h1{display:none !important;}';
-      (document.head || document.documentElement).appendChild(s);
+      if (window.__cgHideHeading) return;
+      window.__cgHideHeading = true;
+      var CSS = '.legal-shell > h1{display:none !important;}';
+      try {
+        if ('adoptedStyleSheets' in document && 'replaceSync' in CSSStyleSheet.prototype) {
+          var sheet = new CSSStyleSheet();
+          sheet.replaceSync(CSS);
+          document.adoptedStyleSheets = document.adoptedStyleSheets.concat(sheet);
+          return;
+        }
+      } catch (e) { /* fall through */ }
+      function hide() {
+        var nodes = document.querySelectorAll('.legal-shell > h1'), i;
+        for (i = 0; i < nodes.length; i++) nodes[i].style.setProperty('display', 'none', 'important');
+        return nodes.length > 0;
+      }
+      if (hide()) return;
+      document.addEventListener('DOMContentLoaded', hide);
+      if (window.MutationObserver) {
+        var obs = new MutationObserver(function () { if (hide()) obs.disconnect(); });
+        obs.observe(document.documentElement, { childList: true, subtree: true });
+      }
     })();
     """
 

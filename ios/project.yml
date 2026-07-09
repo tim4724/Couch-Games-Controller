@@ -24,21 +24,19 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         GENERATE_INFOPLIST_FILE: false
-        CODE_SIGN_STYLE: Automatic
-        DEVELOPMENT_TEAM: 5ZH48MPAM3 # survives xcodegen regeneration; Xcode-pane picks don't
-      configs:
-        # Release (the Archive config) signs MANUALLY with the App Store
-        # distribution profile. This team has no registered devices, so automatic
-        # signing can't mint the development profile it insists on — but an App
-        # Store distribution profile needs none. Debug stays automatic (simulator
-        # builds don't sign, so CI is unaffected). The profile is bound to the
-        # explicit App ID com.couch-games.controller carrying Associated Domains;
-        # set that up in the portal, not here. Xcode-pane signing picks don't
-        # survive `xcodegen generate` — these do.
-        Release:
-          CODE_SIGN_STYLE: Manual
-          CODE_SIGN_IDENTITY: "Apple Distribution"
-          PROVISIONING_PROFILE_SPECIFIER: "CouchGames App Store"
+        # Manual signing for BOTH configs with the App Store distribution
+        # profile. This team has no registered devices, so automatic signing
+        # can't mint the development profile it insists on. Debug only ever
+        # builds for the simulator (CI screenshots), which isn't code-signed, so
+        # the distribution profile is inert there; Release uses it for the
+        # archive. The profile is bound to the explicit App ID
+        # com.couch-games.controller carrying Associated Domains — set that up in
+        # the portal, not here. Xcode-pane signing picks don't survive
+        # `xcodegen generate`; these do.
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "Apple Distribution"
+        PROVISIONING_PROFILE_SPECIFIER: "CouchGames App Store"
+        DEVELOPMENT_TEAM: 5ZH48MPAM3
     # Universal Links. Each host serves /.well-known/apple-app-site-association;
     # hexstacker.com scopes to the 6-char room code, couch-games.com adds the
     # legal pages (/privacy, /imprint, EN + default). The AASA room pattern is a

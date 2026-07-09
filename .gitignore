@@ -10,6 +10,8 @@ android/local.properties
 android/keystore.properties
 *.jks
 *.keystore
+*.p12
+*.mobileprovision
 .idea/
 android/build/
 android/captures/

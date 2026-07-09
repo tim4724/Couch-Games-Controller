@@ -21,7 +21,9 @@ val keystoreProps = Properties().apply {
 // on the machine, outside the repo. `file()` leaves an absolute path untouched —
 // unlike a relative one, which it would re-root under this module (android/app), not
 // where the keystore actually is.
-val releaseStoreFile = keystoreProps.getProperty("storeFile")?.let { file(it) }
+// rootProject, not this module: keystore.properties documents storeFile as
+// relative to android/ (absolute paths are unaffected).
+val releaseStoreFile = keystoreProps.getProperty("storeFile")?.let { rootProject.file(it) }
 val hasReleaseKeystore = releaseStoreFile != null
 
 android {

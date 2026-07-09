@@ -62,11 +62,11 @@ jobs:
 
       - name: Verify the AAB is signed with the upload key
         run: |
-          AAB=android/app/build/outputs/bundle/release/app-release.aab
-          keytool -printcert -jarfile "$AAB"
+          CERT="$(keytool -printcert -jarfile android/app/build/outputs/bundle/release/app-release.aab)"
+          echo "$CERT"
           # Belt and suspenders on top of the fail-fast above: the Gradle script
           # debug-signs release builds whenever keystore.properties is unusable.
-          if keytool -printcert -jarfile "$AAB" | grep -q "CN=Android Debug"; then
+          if grep -q "CN=Android Debug" <<< "$CERT"; then
             echo "::error::AAB is debug-signed — upload keystore was not applied"
             exit 1
           fi

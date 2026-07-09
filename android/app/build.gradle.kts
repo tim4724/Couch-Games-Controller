@@ -9,20 +9,17 @@ plugins {
 }
 
 // Release signing is driven by a gitignored `android/keystore.properties` (see
-// keystore.properties.example). It is absent on CI and other machines, so
-// `hasReleaseKeystore` is false there and the release build falls back to debug
-// signing — the project still builds and tests. A real Play Store upload needs
-// the file present with the upload keystore it points at.
+// keystore.properties.example; release-build.yml materializes it from secrets).
+// Where it is absent, `hasReleaseKeystore` is false and the release build falls
+// back to debug signing — the project still builds and tests. A real Play Store
+// upload needs the file present with the upload keystore it points at.
 val keystorePropsFile = rootProject.file("keystore.properties")
 val keystoreProps = Properties().apply {
     if (keystorePropsFile.exists()) keystorePropsFile.inputStream().use { load(it) }
 }
-// storeFile is an absolute path to the upload keystore, so the .jks can live anywhere
-// on the machine, outside the repo. `file()` leaves an absolute path untouched —
-// unlike a relative one, which it would re-root under this module (android/app), not
-// where the keystore actually is.
-// rootProject, not this module: keystore.properties documents storeFile as
-// relative to android/ (absolute paths are unaffected).
+// storeFile may be absolute (a keystore anywhere on the machine, outside the repo)
+// or relative to android/ as keystore.properties.example documents — hence
+// rootProject.file(), which `file()` would re-root under this module (android/app).
 val releaseStoreFile = keystoreProps.getProperty("storeFile")?.let { rootProject.file(it) }
 val hasReleaseKeystore = releaseStoreFile != null
 

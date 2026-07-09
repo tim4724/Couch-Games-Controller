@@ -108,6 +108,23 @@ enum GameHostJS {
     })();
     """
 
+    /// Evaluated on UIApplication.didEnterBackground, inside the grace window
+    /// before the web content process suspends (CONTRACT.md §7).
+    ///
+    /// Why (iOS-only quirk, no Android mirror of the underlying problem):
+    /// WKWebView's networking runs in a separate system process that keeps the
+    /// game's relay WebSocket alive — answering protocol-level pings — for as long
+    /// as the suspended app lives, so the relay sees a connected player long after
+    /// the user went home. On Android the OS freezes the whole app process and the
+    /// relay times the player out. No engine fires `pagehide` on backgrounding, but
+    /// games already close their socket in a `pagehide` handler (the bfcache path
+    /// this event exists for), so a synthetic persisted pagehide is the
+    /// standards-shaped way to say "stop now". The reconnect half needs no launcher
+    /// help: the engine delivers the real `visibilitychange` → visible on
+    /// foreground, and games reconnect off that.
+    static let dispatchPageHide =
+        "window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }));"
+
     /// The theme-meta observer, evaluated after each page load. Pushes the metas'
     /// state through `CouchGamesHost.themeChanged` immediately and on every change —
     /// head mutations via MutationObserver, plus scheme flips (a `media` attribute

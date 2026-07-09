@@ -81,6 +81,8 @@ import androidx.core.view.DisplayCutoutCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.couchgames.controller.R
 import com.couchgames.controller.BuildConfig
 import com.couchgames.controller.data.LAUNCHER_HOST
@@ -226,6 +228,13 @@ private fun GameHostContent(
   // Swallow system back — a stray press or edge swipe must not drop a player out
   // of a live match. LEAVE is the only way out.
   BackHandler { /* intentionally no-op */ }
+
+  // Leaving the app (home/app switch/lock) synthesizes `pagehide` so the game
+  // closes its relay socket immediately (CONTRACT.md §7) — see DISPATCH_PAGE_HIDE_JS.
+  // Reconnect needs no help: the engine fires visibilitychange → visible on return.
+  LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
+    webView?.evaluateJavascript(DISPATCH_PAGE_HIDE_JS, null)
+  }
 
   // A game-supplied theme-color becomes the chrome's scrim tint; its content
   // color is luminance-picked since the page sends no pair.

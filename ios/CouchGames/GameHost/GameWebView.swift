@@ -147,6 +147,10 @@ struct GameWebView: UIViewRepresentable {
         )
         coordinator.lastInjectedName = playerName
         coordinator.lastPushedZone = safeZone
+        // Going home must drop the relay socket (Android gets this for free from the
+        // process freezer; iOS keeps sockets alive in the out-of-process network
+        // stack) — the page's own pagehide/visibilitychange handlers do the work.
+        coordinator.observeBackgrounding(of: webView)
         if let url = URL(string: joinUrl) {
             webView.load(URLRequest(url: url))
         }
@@ -189,6 +193,7 @@ struct GameWebView: UIViewRepresentable {
     /// Tear the web view down so the game's WebSocket/audio fully stop the moment we pop.
     static func dismantleUIView(_ webView: CGWebView, coordinator: Coordinator) {
         coordinator.isTearingDown = true
+        NotificationCenter.default.removeObserver(coordinator)
         webView.stopLoading()
         webView.configuration.userContentController.removeScriptMessageHandler(forName: "cgHost")
         webView.configuration.userContentController.removeAllUserScripts()
@@ -209,8 +214,31 @@ struct GameWebView: UIViewRepresentable {
         private var didEnd = false
         private var faviconCaptured = false  // once per session — didFinish fires on every navigation
 
+        // Weak: the coordinator must not extend the web view's life past dismantle.
+        // Set once from makeUIView.
+        private weak var hostedWebView: CGWebView?
+
         init(parent: GameWebView) {
             self.parent = parent
+        }
+
+        /// Synthesize `pagehide` into the page when the app is backgrounded, so the
+        /// game closes its relay socket (CONTRACT.md §7; see GameHostJS.dispatchPageHide
+        /// for the full why). No foreground counterpart: the engine fires the real
+        /// `visibilitychange` → visible, which is the game's reconnect trigger.
+        /// didEnterBackground, not willResignActive: Control Center / notification
+        /// pulls and app-switcher peeks shouldn't churn the connection. The eval runs
+        /// inside the background grace window, before the content process suspends.
+        func observeBackgrounding(of webView: CGWebView) {
+            hostedWebView = webView
+            NotificationCenter.default.addObserver(
+                self, selector: #selector(appDidEnterBackground),
+                name: UIApplication.didEnterBackgroundNotification, object: nil
+            )
+        }
+
+        @objc private func appDidEnterBackground() {
+            hostedWebView?.evaluateJavaScript(GameHostJS.dispatchPageHide, completionHandler: nil)
         }
 
         /// The trust boundary. Only https navigations to an allow-listed domain stay

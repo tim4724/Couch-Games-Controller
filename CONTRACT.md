@@ -164,6 +164,29 @@ The launcher resolves a typed code through `GET {relayBase}/room/{code}`:
 Registering a `url` is what makes typed-code join deterministic; without it a code only
 resolves when the game is the sole live game or is disambiguated by `origin`.
 
+## 7. Launcher → game, app lifecycle: synthetic `pagehide` on background
+
+When the player leaves the launcher app (home, app switch, lock) the shell
+dispatches a synthetic persisted `pagehide` on `window` — the same event a
+browser fires when it freezes a page into the back/forward cache:
+
+```js
+window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }));
+```
+
+A controller should close its relay socket in its `pagehide` handler so the
+display sees the player leave *immediately*. Without this, disconnect timing is
+platform luck: Android drops the socket whenever the OS freezes the cached app
+process (OEM-dependent, can take a while), and iOS never drops it — WKWebView's
+out-of-process network stack keeps the socket alive and answering pings for as
+long as the app stays suspended, leaving a zombie player on the display.
+
+There is no synthetic counterpart on return: the engine fires the standard
+`visibilitychange` → `visible`, and the controller should reconnect there. Both
+events are ordinary web behavior, so the same code is correct in a plain
+browser (where `pagehide` fires on navigation/bfcache instead). Additive in v1:
+a game without a `pagehide` handler simply keeps today's behavior.
+
 ## Checklist for a new game
 
 1. Read `cgv` + `cgName`; when `cgv=1`: skip name entry, don't persist the name,
@@ -172,9 +195,11 @@ resolves when the game is the sole live game or is disambiguated by `origin`.
 3. Call `window.CouchGamesHost.gameEnded(reason)` at the terminal-session-end
    chokepoint when available, else fall back to normal web behavior.
 4. Keep interactive UI inside the safe zone (§5).
-5. *(Optional)* Declare `theme-color` / `cg-accent-color` metas (§4).
-6. Register the controller-URL template on room create so typed codes resolve (§6).
-7. Declare the game in `games-manifest.json` (hosts, controllerBaseUrl, room-code
+5. Close the relay socket on `pagehide`; reconnect on `visibilitychange` →
+   `visible` (§7).
+6. *(Optional)* Declare `theme-color` / `cg-accent-color` metas (§4).
+7. Register the controller-URL template on room create so typed codes resolve (§6).
+8. Declare the game in `games-manifest.json` (hosts, controllerBaseUrl, room-code
    format). No other launcher changes needed.
 
 Keep all contract code in the game's own bundle — game origins typically ship

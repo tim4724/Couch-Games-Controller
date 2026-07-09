@@ -12,6 +12,19 @@ import org.json.JSONObject
 internal data class PageTheme(val bar: Color? = null, val accent: Color? = null)
 
 /**
+ * Evaluated when the hosting activity STOPs — home, app switch, lock (CONTRACT.md §7).
+ *
+ * A synthetic persisted `pagehide` tells the game to close its relay socket NOW,
+ * so the display drops the player the moment they leave instead of whenever the
+ * OS freezes the cached process (OEM/timing dependent — and on iOS never, which
+ * is what made this deterministic dispatch necessary; Android mirrors it for
+ * parity). No foreground counterpart: the engine fires the real
+ * `visibilitychange` → visible on return, which is the game's reconnect trigger.
+ */
+internal const val DISPATCH_PAGE_HIDE_JS =
+  "window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }));"
+
+/**
  * The launcher-injected observer, evaluated after each page load. Pushes the
  * metas' state through `CouchGamesHost.themeChanged` immediately and on every
  * change — head mutations via MutationObserver, plus scheme flips (a `media`

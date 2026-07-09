@@ -101,6 +101,7 @@ import com.couchgames.controller.data.RoomDirectory
 import com.couchgames.controller.data.RoomLookup
 import com.couchgames.controller.data.resolveTypedCode
 import com.couchgames.controller.data.withProfile
+import com.couchgames.controller.ui.legal.LegalLinks
 import com.couchgames.controller.R
 import com.couchgames.controller.ui.components.GameArt
 import com.couchgames.controller.ui.components.JoinButtons
@@ -117,6 +118,7 @@ fun MainScreen(
   deepLink: String? = null,
   onDeepLinkConsumed: () -> Unit = {},
   onJoin: (joinUrl: String, title: String, allowedHosts: List<String>) -> Unit = { _, _, _ -> },
+  onOpenLegalDoc: (url: String) -> Unit = {},
   onOpenAbout: () -> Unit = {},
   // Set when a game reports it ended and the host popped back here — shown as a banner
   // in the rejoin slot. Cleared on dismiss (auto after a few seconds, or tap/swipe).
@@ -183,10 +185,16 @@ fun MainScreen(
     }
   }
 
-  // An incoming App Link goes through the same name gate as a scan.
+  // An incoming App Link: a legal-page link opens the in-app doc viewer; anything
+  // else is a join and goes through the same name gate as a scan. The URL keeps its
+  // locale segment (/en/privacy vs /privacy), so the viewer loads the right variant.
   LaunchedEffect(deepLink) {
     if (deepLink != null) {
-      resolveAndJoin(deepLink)
+      if (LegalLinks.isPrivacy(deepLink) || LegalLinks.isImprint(deepLink)) {
+        onOpenLegalDoc(deepLink)
+      } else {
+        resolveAndJoin(deepLink)
+      }
       onDeepLinkConsumed()
     }
   }

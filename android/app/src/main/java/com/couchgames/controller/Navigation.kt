@@ -64,6 +64,9 @@ fun MainNavigation(deepLink: String? = null, onDeepLinkConsumed: () -> Unit = {}
           onJoin = { joinUrl, title, allowedHosts ->
             backStack.add(GameHost(joinUrl, title, allowedHosts))
           },
+          // A privacy/imprint App Link opens the in-app doc viewer over Main,
+          // rather than routing the URL through the join resolver.
+          onOpenLegalDoc = { url -> backStack.add(WebDoc(url)) },
           onOpenAbout = { backStack.add(About) },
           gameEndBanner = gameEndBanner,
           onDismissGameEndBanner = { gameEndBanner = null },

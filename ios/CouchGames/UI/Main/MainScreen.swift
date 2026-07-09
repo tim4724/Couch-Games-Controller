@@ -12,15 +12,18 @@ struct MainScreen: View {
     let isTopVisible: Bool
     let onDeepLinkConsumed: () -> Void
     let onJoin: (String, String, [String]) -> Void   // (joinUrl, title, allowedHosts)
+    let onOpenLegalDoc: (String) -> Void
     let onOpenAbout: () -> Void
 
     init(deepLink: String?, isTopVisible: Bool, onDeepLinkConsumed: @escaping () -> Void,
          onJoin: @escaping (String, String, [String]) -> Void,
+         onOpenLegalDoc: @escaping (String) -> Void,
          onOpenAbout: @escaping () -> Void) {
         self.deepLink = deepLink
         self.isTopVisible = isTopVisible
         self.onDeepLinkConsumed = onDeepLinkConsumed
         self.onJoin = onJoin
+        self.onOpenLegalDoc = onOpenLegalDoc
         self.onOpenAbout = onOpenAbout
     }
 
@@ -162,7 +165,14 @@ struct MainScreen: View {
         .ignoresSafeArea(.keyboard)
         .onChange(of: deepLink, initial: true) { _, newValue in
             guard let link = newValue else { return }
-            resolveAndJoin(link)
+            // A legal-page App Link opens the in-app doc viewer; anything else is a
+            // join. The URL keeps its locale segment (/en/privacy vs /privacy), so
+            // the viewer loads the right variant.
+            if CG.legalTitle(for: URL(string: link)) != nil {
+                onOpenLegalDoc(link)
+            } else {
+                resolveAndJoin(link)
+            }
             onDeepLinkConsumed()
         }
         .onChange(of: codeText) { _, newValue in

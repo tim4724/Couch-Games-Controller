@@ -125,6 +125,12 @@ struct RootView: View {
                     onJoin: { url, title, hosts in
                         router.push(.gameHost(GameHostParams(joinUrl: url, title: title, allowedHosts: hosts)))
                     },
+                    // A privacy/imprint App Link opens the in-app doc viewer over Main,
+                    // rather than routing the URL through the join resolver.
+                    onOpenLegalDoc: { url in
+                        let title = CG.legalTitle(for: URL(string: url)) ?? String(localized: "Privacy Policy")
+                        router.push(.webDoc(WebDocParams(url: url, title: title)))
+                    },
                     onOpenAbout: { router.push(.about) }
                 )
                 .navigationDestination(for: Route.self) { route in

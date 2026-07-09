@@ -64,6 +64,20 @@
                 <data android:scheme="https" android:host="couch-games.com" android:pathPattern="/......" />
                 <data android:scheme="https" android:host="*.couch-games.com" android:pathPattern="/......" />
             </intent-filter>
+
+            <!-- couch-games.com legal pages open in the in-app doc viewer (WebDocScreen),
+                 not the join flow — privacy + imprint, default and English. Apex only:
+                 preview subdomains don't serve these. Exact paths, so everything else on
+                 the apex still routes by the room-code filter above or the browser. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="couch-games.com" android:path="/privacy" />
+                <data android:scheme="https" android:host="couch-games.com" android:path="/imprint" />
+                <data android:scheme="https" android:host="couch-games.com" android:path="/en/privacy" />
+                <data android:scheme="https" android:host="couch-games.com" android:path="/en/imprint" />
+            </intent-filter>
         </activity>
     </application>
 

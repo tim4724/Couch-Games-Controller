@@ -4,14 +4,22 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CaptureRequest
+import android.hardware.camera2.params.MeteringRectangle
 import android.net.Uri
 import android.provider.Settings
 import android.util.Size
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.camera2.interop.Camera2CameraControl
+import androidx.camera.camera2.interop.Camera2CameraInfo
+import androidx.camera.camera2.interop.CaptureRequestOptions
+import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.core.resolutionselector.ResolutionStrategy
+import androidx.camera.view.CameraController
 import androidx.camera.view.LifecycleCameraController
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.AnimatedVisibility
@@ -347,7 +355,10 @@ private fun CameraPreview(
     controller.bindToLifecycle(lifecycleOwner)
     // cameraInfo is null until the async bind completes — probe when it has.
     controller.initializationFuture.addListener(
-      { onTorchProbed(controller.cameraInfo?.hasFlashUnit() == true) },
+      {
+        onTorchProbed(controller.cameraInfo?.hasFlashUnit() == true)
+        applyCenterMeteringRegions(controller)
+      },
       mainExecutor,
     )
     onDispose {
@@ -366,6 +377,38 @@ private fun CameraPreview(
     },
     modifier = Modifier.fillMaxSize(),
   )
+}
+
+// Continuous AF meters the whole frame by default, so bright or high-contrast
+// clutter at the edges (a lamp, a face on the couch) can pull focus away from
+// the code sitting in the viewfinder. Pin the AF/AE regions to a centered
+// square roughly matching the viewfinder while leaving the mode continuous:
+// the camera still refocuses as the phone moves, just weighted to the center.
+// The square is defined on the sensor's active array, which keeps it centered
+// through the FILL_CENTER crop and any display rotation. Best-effort: devices
+// that support no metering regions (LEGACY hardware) simply skip it.
+@OptIn(ExperimentalCamera2Interop::class)
+private fun applyCenterMeteringRegions(controller: CameraController) {
+  val info = controller.cameraInfo ?: return
+  val control = controller.cameraControl ?: return
+  val camera2Info = Camera2CameraInfo.from(info)
+  val active = camera2Info.getCameraCharacteristic(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE) ?: return
+  val side = minOf(active.width(), active.height()) / 2
+  val region = MeteringRectangle(
+    active.centerX() - side / 2,
+    active.centerY() - side / 2,
+    side,
+    side,
+    MeteringRectangle.METERING_WEIGHT_MAX,
+  )
+  val options = CaptureRequestOptions.Builder()
+  if ((camera2Info.getCameraCharacteristic(CameraCharacteristics.CONTROL_MAX_REGIONS_AF) ?: 0) > 0) {
+    options.setCaptureRequestOption(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(region))
+  }
+  if ((camera2Info.getCameraCharacteristic(CameraCharacteristics.CONTROL_MAX_REGIONS_AE) ?: 0) > 0) {
+    options.setCaptureRequestOption(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(region))
+  }
+  Camera2CameraControl.from(control).setCaptureRequestOptions(options.build())
 }
 
 // Dim everything except a centered rounded window, with a white outline. The

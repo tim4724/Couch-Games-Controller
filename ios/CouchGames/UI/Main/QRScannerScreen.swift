@@ -139,6 +139,7 @@ private struct CameraPreview: UIViewRepresentable {
                         throw SetupError(message: String(localized: "No camera available"))
                     }
                     let input = try AVCaptureDeviceInput(device: device)
+                    Self.applyCenterMetering(device)
                     self.session.beginConfiguration()
                     guard self.session.canAddInput(input) else {
                         self.session.commitConfiguration()
@@ -163,6 +164,30 @@ private struct CameraPreview: UIViewRepresentable {
                     let message = error.localizedDescription
                     DispatchQueue.main.async { self.onFailure(message) }
                 }
+            }
+        }
+
+        // Mirror the Android scanner's center-weighted metering: bias continuous
+        // AF/AE toward the viewfinder center so clutter at the frame edges can't
+        // pull focus or exposure off the code. AVFoundation only takes a point of
+        // interest (no rect); the point must be set BEFORE the mode — changing the
+        // mode is what makes the new point take effect. Best-effort: a lock
+        // failure just leaves the system defaults in place.
+        private static func applyCenterMetering(_ device: AVCaptureDevice) {
+            guard (try? device.lockForConfiguration()) != nil else { return }
+            defer { device.unlockForConfiguration() }
+            let center = CGPoint(x: 0.5, y: 0.5)
+            if device.isFocusPointOfInterestSupported {
+                device.focusPointOfInterest = center
+            }
+            if device.isFocusModeSupported(.continuousAutoFocus) {
+                device.focusMode = .continuousAutoFocus
+            }
+            if device.isExposurePointOfInterestSupported {
+                device.exposurePointOfInterest = center
+            }
+            if device.isExposureModeSupported(.continuousAutoExposure) {
+                device.exposureMode = .continuousAutoExposure
             }
         }
 

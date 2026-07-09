@@ -14,9 +14,6 @@ name: Release build
 on:
   push:
     tags: ["[0-9]+.[0-9]+.[0-9]+"]
-    # TEMP while iterating on this workflow — workflow_dispatch only works once
-    # the file is on the default branch. Remove before merging to main.
-    branches: [ci/release-build]
   workflow_dispatch:
 
 permissions:

@@ -3,8 +3,9 @@
 <plist version="1.0">
 <!-- App Store export used by .github/workflows/release-build.yml. Mirrors the
      manual-signing settings in project.yml (team, profile) — keep them in sync.
-     destination=export writes the .ipa to disk; a later upload step/workflow can
-     switch to destination=upload with an App Store Connect API key. -->
+     destination=export writes the .ipa to disk; on tag builds the workflow
+     patches destination to "upload" in place (plutil) and authenticates with
+     the ASC API key, sending the build straight to TestFlight. -->
 <dict>
 	<key>method</key>
 	<string>app-store-connect</string>

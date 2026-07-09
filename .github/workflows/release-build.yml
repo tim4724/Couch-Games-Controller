@@ -1,10 +1,12 @@
-# Builds the two store-ready, signed release artifacts and uploads them as
-# workflow artifacts — no store upload happens here (that's a manual download +
-# upload for now, or a follow-up workflow with store API credentials):
+# Builds the two store-ready, signed release artifacts:
 #   - Android: .aab signed with the Play upload keystore (materialized from secrets;
-#     see keystore.properties.example)
-#   - iOS: .ipa signed with the Apple Distribution cert + "CouchGames App Store"
-#     profile (project.yml pins manual signing with exactly these), plus the dSYMs
+#     see keystore.properties.example), uploaded as a workflow artifact — the Play
+#     upload itself is still manual.
+#   - iOS: signed with the Apple Distribution cert + "CouchGames App Store" profile
+#     (project.yml pins manual signing with exactly these). Tag builds upload
+#     straight to TestFlight via the ASC API key with the tag as marketing version
+#     (the TestFlight build IS the release candidate — no .ipa artifact);
+#     workflow_dispatch builds export the .ipa as a workflow artifact instead.
 #
 # Runs on bare-semver release tags and on demand. Each signing step fails fast with
 # a named error when its secrets are missing — the Android build would otherwise
@@ -136,22 +138,45 @@ jobs:
       - name: Archive
         working-directory: ios
         run: |
+          # ASC rejects reused build numbers, so stamp a unique one; tag builds
+          # take their marketing version from the tag (bare semver), others keep
+          # project.yml's. Both are xcodebuild-level overrides — project.yml's
+          # static values stay untouched.
+          VERSION_ARGS=("CURRENT_PROJECT_VERSION=$GITHUB_RUN_NUMBER")
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            VERSION_ARGS+=("MARKETING_VERSION=$GITHUB_REF_NAME")
+          fi
           xcodebuild archive \
             -project CouchGames.xcodeproj \
             -scheme CouchGames \
             -destination "generic/platform=iOS" \
-            -archivePath build/CouchGames.xcarchive
-
-      - name: Export signed IPA
-        working-directory: ios
-        run: |
-          xcodebuild -exportArchive \
             -archivePath build/CouchGames.xcarchive \
-            -exportOptionsPlist ExportOptions.plist \
-            -exportPath build/export
-          ls -la build/export
+            "${VERSION_ARGS[@]}"
+
+      - name: Export signed IPA (dispatch) or upload to TestFlight (tag)
+        working-directory: ios
+        env:
+          ASC_API_KEY_P8_BASE64: ${{ secrets.ASC_API_KEY_P8_BASE64 }}
+          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+        run: |
+          EXPORT_ARGS=(-archivePath build/CouchGames.xcarchive -exportOptionsPlist ExportOptions.plist)
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            for v in ASC_API_KEY_P8_BASE64 ASC_API_KEY_ID ASC_API_ISSUER_ID; do
+              [ -n "${!v}" ] || { echo "::error::Secret $v is not set"; exit 1; }
+            done
+            plutil -replace destination -string upload ExportOptions.plist
+            echo "$ASC_API_KEY_P8_BASE64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+            EXPORT_ARGS+=(-authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8"
+                          -authenticationKeyID "$ASC_API_KEY_ID"
+                          -authenticationKeyIssuerID "$ASC_API_ISSUER_ID")
+          else
+            EXPORT_ARGS+=(-exportPath build/export)
+          fi
+          xcodebuild -exportArchive "${EXPORT_ARGS[@]}"
 
       - uses: actions/upload-artifact@v7
+        if: github.ref_type != 'tag'
         with:
           name: com.couch-games.controller-release-ipa
           path: ios/build/export/*.ipa

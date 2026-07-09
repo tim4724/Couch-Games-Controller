@@ -8,14 +8,21 @@ plugins {
   alias(libs.plugins.kotlin.serialization)
 }
 
-// Release signing is driven by a git-ignored `keystore.properties` at the android/ root
-// (keys: storeFile, storePassword, keyAlias, keyPassword; see keystore.properties.example).
-// When it's absent — debug-only checkouts, CI without secrets — the release build stays
-// unsigned; sign it via Android Studio's "Generate Signed Bundle / APK" + Play App Signing.
+// Release signing is driven by a gitignored `android/keystore.properties` (see
+// keystore.properties.example). It is absent on CI and other machines, so
+// `hasReleaseKeystore` is false there and the release build falls back to debug
+// signing — the project still builds and tests. A real Play Store upload needs
+// the file present with the upload keystore it points at.
 val keystorePropsFile = rootProject.file("keystore.properties")
 val keystoreProps = Properties().apply {
     if (keystorePropsFile.exists()) keystorePropsFile.inputStream().use { load(it) }
 }
+// storeFile is an absolute path to the upload keystore, so the .jks can live anywhere
+// on the machine, outside the repo. `file()` leaves an absolute path untouched —
+// unlike a relative one, which it would re-root under this module (android/app), not
+// where the keystore actually is.
+val releaseStoreFile = keystoreProps.getProperty("storeFile")?.let { file(it) }
+val hasReleaseKeystore = releaseStoreFile != null
 
 android {
     namespace = "com.couchgames.controller"
@@ -30,9 +37,9 @@ android {
     }
 
     signingConfigs {
-        if (keystorePropsFile.exists()) {
+        if (hasReleaseKeystore) {
             create("release") {
-                storeFile = keystoreProps.getProperty("storeFile")?.let { rootProject.file(it) }
+                storeFile = releaseStoreFile
                 storePassword = keystoreProps.getProperty("storePassword")
                 keyAlias = keystoreProps.getProperty("keyAlias")
                 keyPassword = keystoreProps.getProperty("keyPassword")
@@ -42,11 +49,13 @@ android {
 
     buildTypes {
         release {
-            // Present only when keystore.properties exists; otherwise null → unsigned build.
-            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Signed with the real upload keystore when android/keystore.properties
+            // is present; otherwise debug-signed so the release build stays
+            // installable for testing on machines/CI without the keystore.
+            signingConfig = signingConfigs.getByName(if (hasReleaseKeystore) "release" else "debug")
         }
     }
     compileOptions {

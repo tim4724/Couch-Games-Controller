@@ -22,3 +22,6 @@ ios/build/
 ios/DerivedData/
 xcuserdata/
 *.xcresult
+
+# Generated from project.yml (entitlements.properties) alongside the .xcodeproj
+ios/CouchGames/CouchGames.entitlements

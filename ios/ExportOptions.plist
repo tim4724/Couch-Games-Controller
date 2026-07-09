@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!-- App Store export used by .github/workflows/release-build.yml. Mirrors the
+     manual-signing settings in project.yml (team, profile) — keep them in sync.
+     destination=export writes the .ipa to disk; a later upload step/workflow can
+     switch to destination=upload with an App Store Connect API key. -->
+<dict>
+	<key>method</key>
+	<string>app-store-connect</string>
+	<key>destination</key>
+	<string>export</string>
+	<key>signingStyle</key>
+	<string>manual</string>
+	<key>teamID</key>
+	<string>5ZH48MPAM3</string>
+	<key>provisioningProfiles</key>
+	<dict>
+		<key>com.couch-games.controller</key>
+		<string>CouchGames App Store</string>
+	</dict>
+	<key>uploadSymbols</key>
+	<true/>
+</dict>
+</plist>

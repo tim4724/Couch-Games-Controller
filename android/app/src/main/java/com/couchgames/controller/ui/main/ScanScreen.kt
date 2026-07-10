@@ -94,6 +94,7 @@ import com.couchgames.controller.data.JoinResolver
 import com.couchgames.controller.ui.components.findActivity
 import com.couchgames.controller.ui.components.stableScreenInsets
 import com.couchgames.controller.ui.components.themeLightBarIcons
+import com.couchgames.controller.ui.legal.LegalLinks
 import java.util.concurrent.Executors
 import kotlinx.coroutines.delay
 import zxingcpp.BarcodeReader
@@ -106,12 +107,16 @@ import zxingcpp.BarcodeReader
  *
  * A decoded QR resolves through [JoinResolver] right here: a bad code shows an
  * inline banner and scanning continues — the player never gets bounced out to
- * retry. Only a successful resolve leaves the screen (via [onJoin]).
+ * retry. Only a successful resolve leaves the screen (via [onJoin]), except a
+ * legal-page QR (the privacy/imprint URL printed on packaging or shown by a
+ * game), which opens the in-app doc viewer instead — same routing the App Link
+ * path applies, since neither is a room.
  */
 @Composable
 fun ScanScreen(
   games: List<Game>,
   onJoin: (JoinOutcome.Success) -> Unit,
+  onOpenLegalDoc: (url: String) -> Unit,
   onEnterCode: () -> Unit,
   onClose: () -> Unit,
 ) {
@@ -173,6 +178,13 @@ fun ScanScreen(
     if (joined) return
     var newFailure: String? = null
     for (raw in raws) {
+      // The launcher's own privacy/imprint URL isn't a room — route it to the doc
+      // viewer (host-validated: the payload is untrusted) instead of failing it.
+      LegalLinks.scannedLegalUrl(raw)?.let {
+        joined = true
+        onOpenLegalDoc(it)
+        return
+      }
       when (val r = JoinResolver.resolve(raw, games)) {
         is JoinOutcome.Success -> {
           joined = true

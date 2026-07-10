@@ -35,6 +35,21 @@ enum CG {
         if path.hasSuffix("privacy") { return String(localized: "Privacy Policy") }
         return nil
     }
+
+    /// A scanned QR payload is arbitrary content — unlike a Universal Link, the OS
+    /// hasn't vouched for its host, and `legalTitle` matches only the path. So before
+    /// the doc viewer (which trusts its URL: no allow-list) may load a scanned value,
+    /// require the launcher apex over https with no embedded credentials, mirroring
+    /// the Universal Link routing. Returns the URL to open (locale variants like
+    /// /en/privacy pass through as-is), or nil when it's not a legal page.
+    static func scannedLegalUrl(_ raw: String) -> String? {
+        guard let components = URLComponents(string: raw),
+              components.scheme?.lowercased() == "https",
+              (components.user ?? "").isEmpty,
+              components.host?.lowercased() == launcherHost,
+              legalTitle(for: components.url) != nil else { return nil }
+        return raw
+    }
 }
 
 // MARK: - Game

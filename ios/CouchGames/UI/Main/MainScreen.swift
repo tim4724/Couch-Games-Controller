@@ -212,6 +212,14 @@ struct MainScreen: View {
                 scanRequest = nil
                 switch result {
                 case .code(let raw):
+                    // The launcher's own privacy/imprint URL isn't a room — route it
+                    // to the doc viewer (host-validated: the payload is untrusted)
+                    // instead of failing it, same as the Universal Link path.
+                    if let legal = CG.scannedLegalUrl(raw) {
+                        successTick += 1
+                        onOpenLegalDoc(legal)
+                        return
+                    }
                     let outcome = JoinResolver.resolve(raw, games: request.games)
                     switch outcome {
                     case .success:

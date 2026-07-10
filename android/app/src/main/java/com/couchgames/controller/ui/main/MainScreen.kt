@@ -344,6 +344,13 @@ fun MainScreen(
       ScanScreen(
         games = games,
         onJoin = { launchJoin(it, profile) },
+        // A scanned legal-page QR: close the camera and open the doc viewer, with
+        // the same confirm haptic as a successful join scan.
+        onOpenLegalDoc = { url ->
+          haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+          showScanner = false
+          onOpenLegalDoc(url)
+        },
         onEnterCode = { codeError = null; showCodeEntry = true },
         onClose = { showScanner = false },
       )

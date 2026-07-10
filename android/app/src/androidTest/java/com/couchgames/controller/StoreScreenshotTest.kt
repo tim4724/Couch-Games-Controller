@@ -127,8 +127,9 @@ class StoreScreenshotTest {
     // Both the sheet and the home join card behind it carry the two join buttons.
     compose.onAllNodesWithText(str(R.string.scan_code)).assertCountEquals(2)
     compose.onAllNodesWithText(str(R.string.enter_code_manually)).assertCountEquals(2)
-    // Give the muted gameplay trailer a moment to prepare and render real frames.
-    Thread.sleep(2_000)
+    // Give the muted gameplay trailer time to download (first locale only — it's
+    // cached after) and render real frames; cover art shows if it isn't ready.
+    Thread.sleep(4_000)
     screenshot("02-game-info-$suffix")
     Espresso.pressBack()
     waitForTextGone(str(R.string.game_hexstacker_players))

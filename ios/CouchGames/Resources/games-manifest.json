@@ -6,7 +6,7 @@
       "name": "HexStacker",
       "status": "live",
       "art": "/artwork/hexstacker-16x9.webp",
-      "video": "hexstacker_trailer",
+      "video": "https://hexstacker.com/artwork/trailer.mp4",
       "accentColor": "#FF6B6B",
       "controllerBaseUrl": "https://hexstacker.com",
       "hosts": [

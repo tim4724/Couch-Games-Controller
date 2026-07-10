@@ -28,8 +28,8 @@ struct GameInfoSheet: View {
             // A live game shows its muted gameplay loop; a not-yet-live game
             // (no video) shows its cover art instead.
             Group {
-                if let video = game.video {
-                    GameplayLoopView(videoName: video)
+                if game.video != nil {
+                    GameplayLoopView(game: game)
                 } else {
                     GameArt(game: game)
                 }
@@ -80,26 +80,26 @@ struct GameInfoSheet: View {
 
 // MARK: - GameplayLoopView
 
+/// A muted gameplay loop, fetched to cache on demand (TrailerCache) and played
+/// from disk. Cover art fills the slot immediately; the player sits on top and
+/// stays transparent until frames render, so the art shows through while the
+/// trailer downloads and simply disappears behind the first frame.
 struct GameplayLoopView: View {
-    let videoName: String     // bundle resource base name; extension "mp4"
+    let game: Game
 
-    @Environment(\.cgPalette) private var palette
-
-    init(videoName: String) {
-        self.videoName = videoName
-    }
-
-    private var videoURL: URL? {
-        // Resources are flattened into the bundle root — look up by last path component.
-        let base = videoName.components(separatedBy: "/").last ?? videoName
-        return Bundle.main.url(forResource: base, withExtension: "mp4")
-    }
+    @State private var localURL: URL?
 
     var body: some View {
-        if let url = videoURL {
-            LoopingPlayerView(url: url)
-        } else {
-            Rectangle().fill(palette.surfaceVariant)
+        ZStack {
+            GameArt(game: game)
+            if let localURL {
+                LoopingPlayerView(url: localURL)
+            }
+        }
+        .task {
+            guard localURL == nil,
+                  let remote = game.video.flatMap(URL.init(string:)) else { return }
+            localURL = await TrailerCache.fetch(remote)
         }
     }
 }

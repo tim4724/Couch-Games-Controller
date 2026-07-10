@@ -19,7 +19,7 @@ data class Game(
   val name: String,
   val status: String,            // "live" | "soon"
   val players: String? = null,   // display copy, e.g. "1–8 players"
-  val video: String? = null,     // res/raw resource name of a muted gameplay loop
+  val video: String? = null,     // https URL of a muted gameplay loop, cached on demand (TrailerCache)
   val accentColor: Color,
   val art: String?,              // asset-relative path, e.g. "artwork/hexstacker-16x9.webp"
   val controllerBaseUrl: String?,
@@ -55,7 +55,7 @@ object GamesManifest {
         status = g.optString("status", "soon"),
         // Per-game display copy lives in string resources, keyed by game id.
         players = context.optStringByName("game_${id}_players"),
-        video = g.optNonBlank("video"),
+        video = g.optNonBlank("video")?.takeIf { it.startsWith("https://") },
         accentColor = parseHexColor(g.optString("accentColor", "")),
         art = g.optNonBlank("art")?.removePrefix("/"),
         controllerBaseUrl = g.optNonBlank("controllerBaseUrl"),

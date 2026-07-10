@@ -69,8 +69,6 @@ fails the check. Run it after any string change.
   the home screen, scan/typed-code resolution, and relay probing. Cover art
   sits next to it in `assets/artwork/`. The iOS app bundles copies under
   `ios/CouchGames/Resources/` — keep them in sync when the manifest changes.
-- `android/app/src/main/res/raw/` — bundled gameplay-loop videos (`res/raw`
-  because `VideoView` needs an `android.resource://` URI).
 - `android/app/src/main/java/com/couchgames/controller/` — `data/` (manifest
   model, join resolution, relay probe, prefs), `ui/main/` (home), `ui/game/`
   (WebView game host), `theme/`.

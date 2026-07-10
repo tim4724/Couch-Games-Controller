@@ -68,8 +68,9 @@ final class StoreScreenshotTests: XCTestCase {
         let players = app.staticTexts["1–8 players"]
         XCTAssertTrue(players.waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Scan the room code it shows to play."].exists)
-        // Give the muted gameplay trailer a moment to render real frames.
-        Thread.sleep(forTimeInterval: 2)
+        // Give the muted gameplay trailer time to download (first locale only — it's
+        // cached after) and render real frames; cover art shows if it isn't ready.
+        Thread.sleep(forTimeInterval: 4)
         snap("02-game-info-\(suffix)")
         // Tap the dimmed area above the content-height sheet to dismiss it.
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.12)).tap()

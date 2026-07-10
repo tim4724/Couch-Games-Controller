@@ -134,7 +134,8 @@ enum GamesManifest {
         let status = (obj["status"] as? String) ?? "soon"
         // Per-game display copy lives in string resources, keyed by game id.
         let players = localizedByKey("game_\(id)_players", bundle: bundle)
-        let video = blankToNil(obj["video"])
+        // A trailer is an https URL, fetched to cache on demand (TrailerCache).
+        let video = blankToNil(obj["video"]).flatMap { $0.hasPrefix("https://") ? $0 : nil }
         let accentColor = parseHexColor((obj["accentColor"] as? String) ?? "")
 
         var art = blankToNil(obj["art"])

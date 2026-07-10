@@ -7,21 +7,38 @@ enum ProfileStore {
 
     private static let nameKey = "cg_profile.name"
 
+    /// Last loaded/saved profile. load() is a @State default expression on the main
+    /// screens, so it re-runs on every struct init (each parent body re-eval) — same
+    /// trap `GamesManifest.games` memoizes against. Only the .standard domain is
+    /// cached; an injected defaults (tests) always reads through. Main-thread only.
+    private static var cached: Profile?
+
     /// Get-or-create: returns the stored name, or on first launch mints a `FunnyName`
     /// and persists it — so every screen's load() reads the same identity instead of
     /// each minting its own.
     static func load(defaults: UserDefaults = .standard) -> Profile {
+        if defaults === UserDefaults.standard, let cached {
+            return cached
+        }
+        let profile: Profile
         let stored = defaults.string(forKey: nameKey) ?? ""
         if !stored.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return Profile(name: stored)
+            profile = Profile(name: stored)
+        } else {
+            profile = Profile(name: FunnyName.random())
+            save(profile, defaults: defaults)
         }
-        let minted = Profile(name: FunnyName.random())
-        save(minted, defaults: defaults)
-        return minted
+        if defaults === UserDefaults.standard {
+            cached = profile
+        }
+        return profile
     }
 
     /// Writes the name verbatim — no trimming on save.
     static func save(_ profile: Profile, defaults: UserDefaults = .standard) {
+        if defaults === UserDefaults.standard {
+            cached = profile
+        }
         defaults.set(profile.name, forKey: nameKey)
     }
 }

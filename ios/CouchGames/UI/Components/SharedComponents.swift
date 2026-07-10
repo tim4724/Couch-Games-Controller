@@ -83,11 +83,27 @@ enum ArtCache {
         return locked { images[path] }
     }
 
+    /// Fire-and-forget decodes for every game's art. Called at scene connect so the
+    /// posters are ready at (or a beat after) first paint instead of popping in when
+    /// each GameArt's .task gets around to them; those tasks then join the in-flight
+    /// decode or hit the memo.
+    static func prewarm(_ games: [Game]) {
+        for game in games {
+            guard let art = game.art else { continue }
+            Task { _ = await uiImage(forAssetPath: art) }
+        }
+    }
+
     private static func locked<T>(_ body: () -> T) -> T {
         lock.lock()
         defer { lock.unlock() }
         return body()
     }
+
+    /// Decoded-bitmap ceiling. Cards render at most ~410pt wide (~1230px at 3x),
+    /// so 720p covers every device while costing a quarter of the memory of the
+    /// shipped 1080p sources.
+    private static let maxPixelSize = CGSize(width: 1280, height: 720)
 
     private static func decode(assetPath: String) -> UIImage? {
         let file = (assetPath as NSString).lastPathComponent
@@ -99,7 +115,15 @@ enum ArtCache {
             let data = try? Data(contentsOf: url),
             let image = UIImage(data: data)   // WebP decodes natively on iOS 17
         else { return nil }
-        return image
+        // UIImage(data:) only parses the header — without forcing it here, the
+        // bitmap decode happens lazily inside the main thread's first CA commit,
+        // defeating this off-main task. preparingThumbnail also downsamples
+        // (aspect-preserving) in the same pass.
+        if image.size.width > maxPixelSize.width || image.size.height > maxPixelSize.height,
+           let thumbnail = image.preparingThumbnail(of: maxPixelSize) {
+            return thumbnail
+        }
+        return image.preparingForDisplay() ?? image
     }
 }
 

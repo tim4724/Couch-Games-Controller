@@ -617,33 +617,6 @@ private struct GameCard: View {
     }
 }
 
-private struct PosterStatusChip: View {
-    let game: Game
-
-    var body: some View {
-        if game.isLive {
-            Text("Live")
-                .font(.cgLabelMedium)
-                .foregroundStyle(Color.black.opacity(0.85))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(Capsule().fill(game.accentColor))
-        } else {
-            Text("Coming soon")
-                .font(.cgLabelMedium)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(
-                    ZStack {
-                        Capsule().fill(Color.black.opacity(0.55))
-                        Capsule().fill(game.accentColor.opacity(0.32))
-                    }
-                )
-        }
-    }
-}
-
 // MARK: - JoinCard (floating, material blur over the poster list)
 
 private struct JoinCard: View {

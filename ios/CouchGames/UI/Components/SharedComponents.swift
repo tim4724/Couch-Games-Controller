@@ -262,32 +262,35 @@ struct JoinButtons: View {
     }
 }
 
-// MARK: - StatusLabel
+// MARK: - PosterStatusChip
 
-/// Inline live/coming-soon status for the game info sheet header.
-struct StatusLabel: View {
+/// Solid accent = live, accent-tinted dark = coming soon. The chip can land on
+/// bright art (the scrim thins toward its top), so the soon-variant needs its own
+/// dark base rather than a bare translucent tint. Shared by the home poster cards
+/// and the info sheet's art overlay.
+struct PosterStatusChip: View {
     let game: Game
-
-    @Environment(\.cgPalette) private var palette
-
-    init(game: Game) {
-        self.game = game
-    }
 
     var body: some View {
         if game.isLive {
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(palette.primary)
-                    .frame(width: 8, height: 8)
-                Text("Live")
-                    .font(.cgLabelLarge)
-                    .foregroundStyle(palette.primary)
-            }
+            Text("Live")
+                .font(.cgLabelMedium)
+                .foregroundStyle(Color.black.opacity(0.85))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(Capsule().fill(game.accentColor))
         } else {
             Text("Coming soon")
-                .font(.cgLabelLarge)
-                .foregroundStyle(palette.onSurfaceVariant)
+                .font(.cgLabelMedium)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(
+                    ZStack {
+                        Capsule().fill(Color.black.opacity(0.55))
+                        Capsule().fill(game.accentColor.opacity(0.32))
+                    }
+                )
         }
     }
 }

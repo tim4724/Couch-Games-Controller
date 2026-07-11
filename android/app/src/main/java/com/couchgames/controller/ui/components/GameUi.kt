@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -33,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -203,18 +205,23 @@ fun JoinButtons(onScan: () -> Unit, onEnterCode: () -> Unit) {
   }
 }
 
+// Solid accent = live, accent-tinted dark = coming soon. The chip can land on
+// bright art (the scrim thins toward its top), so the soon-variant needs its own
+// dark base rather than a bare translucent tint. Shared by the home poster cards
+// and the info sheet's art overlay.
 @Composable
-fun StatusLabel(game: Game) {
-  if (game.isLive) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-      Box(Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
-      Text(stringResource(R.string.status_live), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-    }
-  } else {
-    Text(
-      stringResource(R.string.status_coming_soon),
-      style = MaterialTheme.typography.labelLarge,
-      color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-  }
+fun PosterStatusChip(game: Game, modifier: Modifier = Modifier) {
+  val bg =
+    if (game.isLive) game.accentColor
+    else game.accentColor.copy(alpha = 0.32f).compositeOver(Color.Black.copy(alpha = 0.55f))
+  val fg = if (game.isLive) Color.Black.copy(alpha = 0.85f) else Color.White
+  Text(
+    stringResource(if (game.isLive) R.string.status_live else R.string.status_coming_soon),
+    style = MaterialTheme.typography.labelMedium,
+    color = fg,
+    modifier = modifier
+      .clip(CircleShape)
+      .background(bg)
+      .padding(horizontal = 10.dp, vertical = 4.dp),
+  )
 }

@@ -9,7 +9,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,7 +33,7 @@ import com.couchgames.controller.ui.components.AppSheet
 import com.couchgames.controller.ui.components.GameArt
 import com.couchgames.controller.ui.components.JoinButtons
 import com.couchgames.controller.ui.components.PlaySteps
-import com.couchgames.controller.ui.components.StatusLabel
+import com.couchgames.controller.ui.components.PosterStatusChip
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -56,17 +55,16 @@ fun GameInfoSheet(
       Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 28.dp),
       verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-      Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-      ) {
-        Text(game.name, style = MaterialTheme.typography.headlineSmall)
-        StatusLabel(game)
-      }
-      if (game.video != null) {
-        GameplayLoop(game, game.video)
-      } else {
-        GameArt(game, Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(MaterialTheme.shapes.large))
+      Text(game.name, style = MaterialTheme.typography.headlineSmall)
+      Box {
+        if (game.video != null) {
+          GameplayLoop(game, game.video)
+        } else {
+          GameArt(game, Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(MaterialTheme.shapes.large))
+        }
+        if (!game.isLive) {
+          PosterStatusChip(game, Modifier.align(Alignment.BottomEnd).padding(14.dp))
+        }
       }
       game.players?.let {
         Text(it, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)

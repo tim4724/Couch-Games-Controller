@@ -18,12 +18,9 @@ struct GameInfoSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 12) {
-                Text(game.name)
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(palette.onSurface)
-                StatusLabel(game: game)
-            }
+            Text(game.name)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(palette.onSurface)
 
             // A live game shows its muted gameplay loop; a not-yet-live game
             // (no video) shows its cover art instead.
@@ -37,6 +34,12 @@ struct GameInfoSheet: View {
             .aspectRatio(16.0 / 9.0, contentMode: .fit)
             .frame(maxWidth: .infinity)
             .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(alignment: .bottomTrailing) {
+                if !game.isLive {
+                    PosterStatusChip(game: game)
+                        .padding(14)
+                }
+            }
 
             if let players = game.players {
                 Text(players)

@@ -34,7 +34,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -72,7 +71,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
@@ -109,6 +107,7 @@ import com.couchgames.controller.ui.components.JoinButtons
 import com.couchgames.controller.ui.components.annotatedHostLine
 import com.couchgames.controller.ui.components.MirrorHostSystemBars
 import com.couchgames.controller.ui.components.PlayerChip
+import com.couchgames.controller.ui.components.PosterStatusChip
 import com.couchgames.controller.ui.components.stableScreenInsets
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -652,26 +651,6 @@ private fun GameCard(game: Game, onOpen: (Game) -> Unit) {
       }
     }
   }
-}
-
-// Solid accent = live, accent-tinted dark = coming soon. The chip can land on
-// bright art (the scrim thins toward its top), so the soon-variant needs its own
-// dark base rather than a bare translucent tint.
-@Composable
-private fun PosterStatusChip(game: Game) {
-  val bg =
-    if (game.isLive) game.accentColor
-    else game.accentColor.copy(alpha = 0.32f).compositeOver(Color.Black.copy(alpha = 0.55f))
-  val fg = if (game.isLive) Color.Black.copy(alpha = 0.85f) else Color.White
-  Text(
-    stringResource(if (game.isLive) R.string.status_live else R.string.status_coming_soon),
-    style = MaterialTheme.typography.labelMedium,
-    color = fg,
-    modifier = Modifier
-      .clip(CircleShape)
-      .background(bg)
-      .padding(horizontal = 10.dp, vertical = 4.dp),
-  )
 }
 
 // The floating join card pinned over the scrolling catalog: browse first, act at

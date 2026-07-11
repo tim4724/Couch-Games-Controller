@@ -42,8 +42,11 @@ struct PlayerChip: View {
 
 // MARK: - ArtCache
 
-/// Process-wide memoized async decode of bundled artwork, keyed by asset path.
-/// Assets are flattened into the bundle root, so lookup uses lastPathComponent only.
+/// Process-wide memoized async decode of artwork, keyed by manifest art path:
+/// the bundled copy when one ships (assets are flattened into the bundle root, so
+/// lookup uses lastPathComponent only), else the ArtworkCache copy downloaded from
+/// the manifest URL. Both lookups key on the URL/name, never on content, so a
+/// changed image must ship under a new file name or ?v= — see ArtworkCache.
 enum ArtCache {
     private static let lock = NSLock()
     private static var images: [String: UIImage] = [:]
@@ -51,19 +54,19 @@ enum ArtCache {
     private static var inFlight: [String: Task<UIImage?, Never>] = [:]
 
     /// Synchronous accessor: non-nil only after a successful decode has been memoized.
-    static func cached(forAssetPath path: String) -> UIImage? {
+    static func cached(forArt path: String) -> UIImage? {
         lock.lock()
         defer { lock.unlock() }
         return images[path]
     }
 
-    /// Decode once per asset path, off-main, memoized forever.
-    static func uiImage(forAssetPath path: String) async -> UIImage? {
+    /// Decode once per art path, off-main, memoized forever.
+    static func uiImage(forArt path: String) async -> UIImage? {
         let pending: Task<UIImage?, Never>? = locked {
             if images[path] != nil || failures.contains(path) { return nil }
             if let task = inFlight[path] { return task }
             let task = Task<UIImage?, Never>.detached(priority: .userInitiated) {
-                let result = decode(assetPath: path)
+                let result = await decode(artPath: path)
                 locked {
                     if let result {
                         images[path] = result
@@ -90,7 +93,7 @@ enum ArtCache {
     static func prewarm(_ games: [Game]) {
         for game in games {
             guard let art = game.art else { continue }
-            Task { _ = await uiImage(forAssetPath: art) }
+            Task { _ = await uiImage(forArt: art) }
         }
     }
 
@@ -105,16 +108,32 @@ enum ArtCache {
     /// shipped 1080p sources.
     private static let maxPixelSize = CGSize(width: 1280, height: 720)
 
-    private static func decode(assetPath: String) -> UIImage? {
-        let file = (assetPath as NSString).lastPathComponent
+    private static func decode(artPath: String) async -> UIImage? {
+        if let data = bundledData(artPath: artPath) {
+            return decode(data: data)
+        }
+        // Not shipped in this build — the served manifest introduced or
+        // re-versioned it. Pull it through the URL-keyed disk cache.
+        guard let url = remoteArtURL(artPath),
+              let file = await ArtworkCache.fetch(url),
+              let data = try? Data(contentsOf: file)
+        else { return nil }
+        return decode(data: data)
+    }
+
+    private static func bundledData(artPath: String) -> Data? {
+        let file = (artPath as NSString).lastPathComponent
         let name = (file as NSString).deletingPathExtension
         let ext = (file as NSString).pathExtension
         guard
             !name.isEmpty,
-            let url = Bundle.main.url(forResource: name, withExtension: ext.isEmpty ? nil : ext),
-            let data = try? Data(contentsOf: url),
-            let image = UIImage(data: data)   // WebP decodes natively on iOS 17
+            let url = Bundle.main.url(forResource: name, withExtension: ext.isEmpty ? nil : ext)
         else { return nil }
+        return try? Data(contentsOf: url)
+    }
+
+    private static func decode(data: Data) -> UIImage? {
+        guard let image = UIImage(data: data) else { return nil }   // WebP decodes natively on iOS 17
         // UIImage(data:) only parses the header — without forcing it here, the
         // bitmap decode happens lazily inside the main thread's first CA commit,
         // defeating this off-main task. preparingThumbnail also downsamples
@@ -140,7 +159,7 @@ struct GameArt: View {
     init(game: Game) {
         self.game = game
         if let art = game.art {
-            _image = State(initialValue: ArtCache.cached(forAssetPath: art))
+            _image = State(initialValue: ArtCache.cached(forArt: art))
         }
     }
 
@@ -160,7 +179,7 @@ struct GameArt: View {
             .accessibilityLabel(game.name)
             .task(id: game.art) {
                 guard image == nil, let art = game.art else { return }
-                if let decoded = await ArtCache.uiImage(forAssetPath: art) {
+                if let decoded = await ArtCache.uiImage(forArt: art) {
                     image = decoded
                 } else {
                     decodeFailed = true

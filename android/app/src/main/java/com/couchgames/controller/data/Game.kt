@@ -40,11 +40,17 @@ data class Game(
   val displayHost: String? get() = controllerBaseUrl?.let { runCatching { Uri.parse(it).host }.getOrNull() }
 }
 
-/** Loads the bundled manifest from assets. Never throws — returns [] on failure. */
+/** Manifest parsing — shared by the bundled seed and the served copy (ManifestStore). */
 object GamesManifest {
-  fun load(context: Context): List<Game> = runCatching {
-    val text = context.assets.open("games-manifest.json").bufferedReader().use { it.readText() }
+  /**
+   * Parses manifest [text]. All-or-nothing: any structural failure or an empty
+   * games list → null, so a bad fetch can never half-apply over a good list.
+   * There is no in-band schema version — the latest served JSON is the truth,
+   * and a breaking rework (if ever) ships under a new manifest URL.
+   */
+  fun parse(text: String, context: Context): List<Game>? = runCatching {
     val games = JSONObject(text).getJSONArray("games")
+    if (games.length() == 0) return@runCatching null
     (0 until games.length()).map { i ->
       val g = games.getJSONObject(i)
       val id = g.getString("id")
@@ -55,18 +61,41 @@ object GamesManifest {
         status = g.optString("status", "soon"),
         // Per-game display copy lives in string resources, keyed by game id.
         players = context.optStringByName("game_${id}_players"),
-        video = g.optNonBlank("video")?.takeIf { it.startsWith("https://") },
+        video = g.optHttpsUrl("video"),
         accentColor = parseHexColor(g.optString("accentColor", "")),
         art = g.optNonBlank("art")?.removePrefix("/"),
-        controllerBaseUrl = g.optNonBlank("controllerBaseUrl"),
+        controllerBaseUrl = g.optHttpsUrl("controllerBaseUrl"),
         hosts = if (hostsArr != null) (0 until hostsArr.length()).map { hostsArr.getString(it) } else emptyList(),
-        relayProbeBase = g.optNonBlank("relayProbeBase")?.trimEnd('/'),
+        relayProbeBase = g.optHttpsUrl("relayProbeBase")?.trimEnd('/'),
       )
     }
-  }.getOrElse { emptyList() }
+  }.getOrNull()
+
+  /** The manifest shipped in assets — the seed every install can fall back to. Never throws. */
+  fun loadBundled(context: Context): List<Game> = runCatching {
+    context.assets.open("games-manifest.json").bufferedReader().use { it.readText() }
+  }.getOrNull()?.let { parse(it, context) } ?: emptyList()
+}
+
+/**
+ * Absolute https URL for a manifest art path: site-relative paths (the leading "/"
+ * is already stripped at parse) resolve against the launcher host; absolute URLs
+ * must be https or they're refused.
+ */
+fun remoteArtUrl(art: String): String? = when {
+  art.startsWith("https://") -> art
+  "://" in art -> null
+  else -> "https://$LAUNCHER_HOST/$art"
 }
 
 private fun JSONObject.optNonBlank(name: String): String? = optString(name, "").ifBlank { null }
+
+/**
+ * The manifest may arrive over the network, and its URLs get loaded / probed —
+ * https only, one policy for every URL field.
+ */
+private fun JSONObject.optHttpsUrl(name: String): String? =
+  optNonBlank(name)?.takeIf { it.startsWith("https://") }
 
 /** Resolves a string resource by name (e.g. "game_hexstacker_players"); null if absent or blank. */
 private fun Context.optStringByName(name: String): String? {

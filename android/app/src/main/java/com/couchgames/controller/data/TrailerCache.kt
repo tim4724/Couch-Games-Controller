@@ -2,44 +2,47 @@ package com.couchgames.controller.data
 
 import android.content.Context
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
 import java.security.MessageDigest
 
 /**
- * On-demand download cache for gameplay trailers. Trailers are not bundled — they
- * would grow the install per game — so the info sheet shows cover art while the mp4
- * lands here, then plays from disk on every later open. Files live in cacheDir,
- * keyed by URL, so the OS reclaims them under storage pressure and a manifest URL
- * change simply fetches a new entry.
+ * On-demand URL-keyed download caches in cacheDir, so the OS reclaims the bytes
+ * under storage pressure. Entries are NEVER revalidated — a changed remote file
+ * must ship under a new URL (file rename or ?v= bump in the manifest), which
+ * simply fetches a new entry here.
+ *
+ * - [TrailerCache]: gameplay mp4s — not bundled, they'd grow the install per game.
+ *   The info sheet shows cover art while the file lands, then plays from disk.
+ * - [ArtworkCache]: cover art the current manifest names but this build didn't
+ *   ship (a game added or re-artworked after install; see GameArt).
  */
 object TrailerCache {
   /** Cached file for [url], downloading it first if absent. Blocking — call on IO. Null on any failure. */
-  fun fetch(context: Context, url: String): File? {
-    val dir = File(context.cacheDir, "trailers")
-    dir.mkdirs()
-    val key = MessageDigest.getInstance("SHA-256")
-      .digest(url.toByteArray())
-      .joinToString("") { "%02x".format(it) }
-      .take(16)
-    val file = File(dir, "$key.mp4")
-    if (file.length() > 0) return file
-    return runCatching {
-      val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-        connectTimeout = 10_000
-        readTimeout = 30_000
-      }
-      // Download to a unique temp sibling and rename, so a torn or concurrent
-      // download can never be played.
-      val tmp = File.createTempFile(key, ".part", dir)
-      try {
-        if (conn.responseCode != HttpURLConnection.HTTP_OK) return@runCatching null
-        conn.inputStream.use { input -> tmp.outputStream().use { input.copyTo(it) } }
-        if (tmp.renameTo(file) || file.length() > 0) file else null
-      } finally {
-        conn.disconnect()
-        tmp.delete()
-      }
-    }.getOrNull()
+  fun fetch(context: Context, url: String): File? = fetchCached(context, url, "trailers", "mp4")
+}
+
+object ArtworkCache {
+  /** Cached file for [url], downloading it first if absent. Blocking — call on IO. Null on any failure. */
+  fun fetch(context: Context, url: String): File? = fetchCached(context, url, "artwork", "img")
+}
+
+private fun fetchCached(context: Context, url: String, dirName: String, ext: String): File? {
+  val dir = File(context.cacheDir, dirName)
+  dir.mkdirs()
+  val key = MessageDigest.getInstance("SHA-256")
+    .digest(url.toByteArray())
+    .joinToString("") { "%02x".format(it) }
+    .take(16)
+  val file = File(dir, "$key.$ext")
+  if (file.length() > 0) return file
+  // Download to a unique temp sibling and rename, so a torn or concurrent
+  // download can never be served.
+  val tmp = runCatching { File.createTempFile(key, ".part", dir) }.getOrNull() ?: return null
+  try {
+    httpGet(url, readTimeoutMs = 30_000) { input ->
+      tmp.outputStream().use { input.copyTo(it) }
+    } ?: return null
+    return if (tmp.renameTo(file) || file.length() > 0) file else null
+  } finally {
+    tmp.delete()
   }
 }

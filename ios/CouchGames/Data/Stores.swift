@@ -8,9 +8,9 @@ enum ProfileStore {
     private static let nameKey = "cg_profile.name"
 
     /// Last loaded/saved profile. load() is a @State default expression on the main
-    /// screens, so it re-runs on every struct init (each parent body re-eval) — same
-    /// trap `GamesManifest.games` memoizes against. Only the .standard domain is
-    /// cached; an injected defaults (tests) always reads through. Main-thread only.
+    /// screens, so it re-runs on every struct init (each parent body re-eval). Only
+    /// the .standard domain is cached; an injected defaults (tests) always reads
+    /// through. Main-thread only.
     private static var cached: Profile?
 
     /// Get-or-create: returns the stored name, or on first launch mints a `FunnyName`
@@ -40,6 +40,56 @@ enum ProfileStore {
             cached = profile
         }
         defaults.set(profile.name, forKey: nameKey)
+    }
+}
+
+// MARK: - ManifestStore
+
+/// The games list the launcher renders: the last manifest fetched from
+/// couch-games.com (persisted verbatim, re-parsed per launch so per-locale copy
+/// resolves against the current language), seeded from the bundled copy until a
+/// fetch has ever succeeded. `refresh()` pulls at most once per process launch —
+/// a launch-fresh list is fresh enough, and every failure silently keeps the
+/// current list. Served art paths may name files this build didn't ship; ArtCache
+/// pulls those through ArtworkCache.
+@MainActor final class ManifestStore: ObservableObject {
+
+    static let shared = ManifestStore()
+
+    @Published private(set) var games: [Game]
+
+    private static let jsonKey = "cg_manifest.json"
+    private static let manifestURL = URL(string: "https://\(CG.launcherHost)/games-manifest.json")!
+    /// Sanity cap for a served manifest (ours is ~1 KB) — a deploy mistake must not balloon memory.
+    private static let maxBytes = 1 << 20
+
+    private var refreshed = false
+
+    private init() {
+        if let data = UserDefaults.standard.data(forKey: Self.jsonKey),
+           let cached = GamesManifest.parse(data) {
+            games = cached
+        } else {
+            games = GamesManifest.load()
+        }
+    }
+
+    /// Fetches the served manifest and, when it validates, persists + publishes it live.
+    func refresh() async {
+        guard !refreshed else { return }
+        refreshed = true
+        guard let (data, response) = try? await URLSession.shared.data(from: Self.manifestURL),
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              data.count <= Self.maxBytes,
+              // Identical to the seeded copy (the common case every launch) — the
+              // current list already reflects it, so skip the re-parse, the
+              // rewrite, and the objectWillChange.
+              data != UserDefaults.standard.data(forKey: Self.jsonKey),
+              let fresh = GamesManifest.parse(data) else {
+            return
+        }
+        UserDefaults.standard.set(data, forKey: Self.jsonKey)
+        games = fresh
     }
 }
 

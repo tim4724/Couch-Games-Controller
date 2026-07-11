@@ -29,7 +29,10 @@ struct MainScreen: View {
 
     // MARK: State
 
-    @State private var games: [Game] = GamesManifest.games
+    // Seeded synchronously (cached fetch, else bundled); the once-per-launch
+    // refresh task below updates it live when the served manifest differs.
+    @ObservedObject private var manifest = ManifestStore.shared
+    private var games: [Game] { manifest.games }
     @State private var profile: Profile = ProfileStore.load()
     // Item-based presentation: values are snapshotted into the request at
     // present time. @State read inside a sheet/cover content closure is not
@@ -184,6 +187,9 @@ struct MainScreen: View {
             guard isTopVisible else { return }
             await runRejoinPoll()
         }
+        // Pull the served manifest once per launch (ManifestStore guards
+        // re-entry, so push/pop re-creating this screen doesn't refetch).
+        .task { await manifest.refresh() }
         .onChange(of: messages.gameEndBanner) { _, banner in
             // A just-ended game (banner appeared) may have cleared the saved room — a
             // room_not_found end drops it. Reflect the store the instant the banner

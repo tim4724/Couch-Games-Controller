@@ -65,10 +65,18 @@ fails the check. Run it after any string change.
 
 ## Where things live
 
-- `android/app/src/main/assets/games-manifest.json` — the games list; drives
-  the home screen, scan/typed-code resolution, and relay probing. Cover art
-  sits next to it in `assets/artwork/`. The iOS app bundles copies under
+- `android/app/src/main/assets/games-manifest.json` — the bundled games list;
+  drives the home screen, scan/typed-code resolution, and relay probing. Cover
+  art sits next to it in `assets/artwork/`. The iOS app bundles copies under
   `ios/CouchGames/Resources/` — keep them in sync when the manifest changes.
+  The bundled copy is only the first-run seed: once per launch both apps fetch
+  `couch-games.com/games-manifest.json` (served no-cache from the Couch-Games
+  repo), persist it, and render from it — so a new game or status flip is one
+  site deploy, no app update. Art the current build didn't ship is downloaded
+  into a URL-keyed cache that is never revalidated, and shipped art is matched
+  by file name — so a **changed image must get a new file name (or a `?v=`
+  bump) in the served manifest**; changed bytes under an unchanged URL go
+  unnoticed by design, same as the site's CSS/JS versioning.
 - `android/app/src/main/java/com/couchgames/controller/` — `data/` (manifest
   model, join resolution, relay probe, prefs), `ui/main/` (home), `ui/game/`
   (WebView game host), `theme/`.

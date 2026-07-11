@@ -41,7 +41,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         // Posters dominate the first frame — start their off-main decodes now
         // rather than when each card's .task runs (after first paint).
-        ArtCache.prewarm(GamesManifest.games)
+        ArtCache.prewarm(ManifestStore.shared.games)
 
         // Cold-start deep link: connectionOptions only exist at scene connect,
         // so "consumed once, never replayed" holds by construction.

@@ -61,6 +61,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -89,7 +90,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.couchgames.controller.data.Favicon
 import com.couchgames.controller.data.Game
-import com.couchgames.controller.data.GamesManifest
+import com.couchgames.controller.data.ManifestStore
 import com.couchgames.controller.data.JoinOutcome
 import com.couchgames.controller.data.JoinResolver
 import com.couchgames.controller.data.LAUNCHER_HOST
@@ -132,7 +133,9 @@ fun MainScreen(
   val scope = rememberCoroutineScope()
   val haptics = LocalHapticFeedback.current
   val lifecycleOwner = LocalLifecycleOwner.current
-  val games = remember { GamesManifest.load(context) }
+  // Seeded synchronously (cached fetch, else bundled); the once-per-launch
+  // refresh below updates it live when the served manifest differs.
+  val games by ManifestStore.games(context).collectAsState()
   var profile by remember { mutableStateOf(ProfileStore.load(context)) }
   var showProfile by remember { mutableStateOf(false) }
   var afterName by remember { mutableStateOf<AfterName?>(null) }
@@ -184,6 +187,10 @@ fun MainScreen(
       is JoinOutcome.Failure -> fail(r.messageRes)
     }
   }
+
+  // Pull the served manifest once per launch (ManifestStore guards re-entry, so
+  // nav pop-backs recomposing this screen don't refetch).
+  LaunchedEffect(Unit) { ManifestStore.refresh(context) }
 
   // An incoming App Link: a legal-page link opens the in-app doc viewer; anything
   // else is a join and goes through the same name gate as a scan. The URL keeps its

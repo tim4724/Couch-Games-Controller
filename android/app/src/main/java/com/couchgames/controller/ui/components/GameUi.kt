@@ -1,5 +1,6 @@
 package com.couchgames.controller.ui.components
 
+import android.content.Context
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -45,8 +46,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.couchgames.controller.R
+import com.couchgames.controller.data.ArtworkCache
 import com.couchgames.controller.data.Game
 import com.couchgames.controller.data.LAUNCHER_HOST
+import com.couchgames.controller.data.remoteArtUrl
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -88,9 +91,25 @@ fun PlayerChip(name: String, onClick: () -> Unit, accented: Boolean = false) {
   )
 }
 
-// Decoded once per asset, off the main thread — opening a sheet never decodes
+// Decoded once per art path, off the main thread — opening a sheet never decodes
 // mid-animation.
 private val artCache = ConcurrentHashMap<String, ImageBitmap>()
+
+/**
+ * Decodes a manifest art path: the bundled asset when one ships under
+ * artwork/<file> (matched by file name — the bundled and served manifests root
+ * the same art differently), else the ArtworkCache copy downloaded from the
+ * manifest URL. Both lookups key on the URL/name, never on content, so a changed
+ * image must ship under a new file name or ?v= — see ArtworkCache.
+ */
+private fun decodeArt(context: Context, art: String): ImageBitmap? {
+  runCatching {
+    context.assets.open("artwork/" + art.substringAfterLast('/')).use(BitmapFactory::decodeStream)
+  }.getOrNull()?.let { return it.asImageBitmap() }
+  val url = remoteArtUrl(art) ?: return null
+  val file = ArtworkCache.fetch(context, url) ?: return null
+  return BitmapFactory.decodeFile(file.path)?.asImageBitmap()
+}
 
 /**
  * Cover art or, when a game has none yet, its accent as a soft gradient. The
@@ -100,12 +119,10 @@ private val artCache = ConcurrentHashMap<String, ImageBitmap>()
 fun GameArt(game: Game, modifier: Modifier = Modifier) {
   val context = LocalContext.current
   val img by produceState(initialValue = game.art?.let(artCache::get), game.art) {
-    val path = game.art ?: return@produceState
+    val art = game.art ?: return@produceState
     if (value == null) {
       value = withContext(Dispatchers.IO) {
-        runCatching {
-          context.assets.open(path).use { BitmapFactory.decodeStream(it) }?.asImageBitmap()
-        }.getOrNull()?.also { artCache[path] = it }
+        decodeArt(context, art)?.also { artCache[art] = it }
       }
     }
   }

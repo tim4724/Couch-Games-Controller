@@ -101,27 +101,26 @@ enum GamesManifest {
 
     private struct ParseError: Error {}
 
-    /// The bundled manifest, parsed once per process. Use this instead of `load()`
-    /// in view code: a `@State` default expression re-evaluates on every struct
-    /// init (each NavigationStack push/pop re-creates MainScreen), and the bundle
-    /// can't change mid-run — so re-reading the file would be pure waste.
-    static let games: [Game] = load()
+    /// Parses manifest bytes. All-or-nothing: ANY structural failure or an empty
+    /// games list → nil, so a bad fetch can never half-apply over a good list.
+    /// There is no in-band schema version — the latest served JSON is the truth,
+    /// and a breaking rework (if ever) ships under a new manifest URL.
+    static func parse(_ data: Data, bundle: Bundle = .main) -> [Game]? {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let entries = root["games"] as? [Any], !entries.isEmpty else {
+            return nil
+        }
+        return try? entries.map { try parseGame($0, bundle: bundle) }
+    }
 
-    /// Loads "games-manifest.json" from the bundle. All-or-nothing: ANY failure → [].
+    /// Loads "games-manifest.json" from the bundle — the seed every install can
+    /// fall back to. Any failure → [].
     static func load(bundle: Bundle = .main) -> [Game] {
-        do {
-            guard let url = bundle.url(forResource: "games-manifest", withExtension: "json") else {
-                return []
-            }
-            let data = try Data(contentsOf: url)
-            guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let entries = root["games"] as? [Any] else {
-                return []
-            }
-            return try entries.map { try parseGame($0, bundle: bundle) }
-        } catch {
+        guard let url = bundle.url(forResource: "games-manifest", withExtension: "json"),
+              let data = try? Data(contentsOf: url) else {
             return []
         }
+        return parse(data, bundle: bundle) ?? []
     }
 
     private static func parseGame(_ raw: Any, bundle: Bundle) throws -> Game {
@@ -135,7 +134,7 @@ enum GamesManifest {
         // Per-game display copy lives in string resources, keyed by game id.
         let players = localizedByKey("game_\(id)_players", bundle: bundle)
         // A trailer is an https URL, fetched to cache on demand (TrailerCache).
-        let video = blankToNil(obj["video"]).flatMap { $0.hasPrefix("https://") ? $0 : nil }
+        let video = httpsURL(obj["video"])
         let accentColor = parseHexColor((obj["accentColor"] as? String) ?? "")
 
         var art = blankToNil(obj["art"])
@@ -143,9 +142,9 @@ enum GamesManifest {
             art = String(a.dropFirst())
         }
 
-        let controllerBaseUrl = blankToNil(obj["controllerBaseUrl"])
+        let controllerBaseUrl = httpsURL(obj["controllerBaseUrl"])
 
-        var relayProbeBase = blankToNil(obj["relayProbeBase"])
+        var relayProbeBase = httpsURL(obj["relayProbeBase"])
         if let r = relayProbeBase {
             var stripped = r
             while stripped.hasSuffix("/") { stripped.removeLast() }
@@ -175,6 +174,21 @@ enum GamesManifest {
         }
         return s
     }
+
+    /// The manifest may arrive over the network, and its URLs get loaded /
+    /// probed — https only, one policy for every URL field.
+    private static func httpsURL(_ value: Any?) -> String? {
+        blankToNil(value).flatMap { $0.hasPrefix("https://") ? $0 : nil }
+    }
+}
+
+/// Absolute https URL for a manifest art path: site-relative paths (the leading "/"
+/// is already stripped at parse) resolve against the launcher host; absolute URLs
+/// must be https or they're refused.
+func remoteArtURL(_ art: String) -> URL? {
+    if art.hasPrefix("https://") { return URL(string: art) }
+    if art.contains("://") { return nil }
+    return URL(string: "https://\(CG.launcherHost)/\(art)")
 }
 
 // MARK: - Parsing / matching helpers

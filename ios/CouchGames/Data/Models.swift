@@ -22,6 +22,14 @@ enum CG {
     /// not an in-app legal doc.
     static let websiteURL = "https://couch-games.com"
 
+    /// The marketing site self-localizes, but opening it in the system browser drops the
+    /// app's chosen language. German gets an explicit /de/ deep link so the localized site
+    /// matches the app; other languages fall back to the root (which auto-detects).
+    static var localizedWebsiteURL: String {
+        let language = Locale.current.language.languageCode?.identifier
+        return language == "de" ? "\(websiteURL)/de/" : websiteURL
+    }
+
     /// Marketing version (CFBundleShortVersionString), surfaced read-only in the
     /// About footer for support/bug reports.
     static var appVersion: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "" }

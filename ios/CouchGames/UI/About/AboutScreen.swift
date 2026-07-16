@@ -22,7 +22,7 @@ struct AboutScreen: View {
                 // The marketing site is a full website, not a legal doc, so it opens
                 // in the system browser rather than the in-app WebDocScreen viewer.
                 AboutRow(label: "couch-games.com", icon: "arrow.up.forward") {
-                    if let url = URL(string: CG.websiteURL) { openURL(url) }
+                    if let url = URL(string: CG.localizedWebsiteURL) { openURL(url) }
                 }
                 Divider()
 

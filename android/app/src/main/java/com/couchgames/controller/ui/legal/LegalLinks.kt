@@ -15,6 +15,12 @@ object LegalLinks {
   // not an in-app legal doc), but lives here since it's the same couch-games.com root.
   const val WEBSITE_URL = "https://couch-games.com"
 
+  // The marketing site self-localizes, but opening it in the system browser drops the
+  // app's chosen language. German gets an explicit /de/ deep link so the localized site
+  // matches the app; other languages fall back to the root (which auto-detects).
+  fun websiteUrl(language: String): String =
+    if (language.equals("de", ignoreCase = true)) "$WEBSITE_URL/de/" else WEBSITE_URL
+
   // The two legal pages cross-link to each other, so the in-app viewer can navigate
   // from one to the other without leaving the screen. These match the loaded URL back
   // to a document so the native app bar can show the right title as the page changes.

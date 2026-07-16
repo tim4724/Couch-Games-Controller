@@ -13,7 +13,7 @@
     <string name="enter_code_manually">Introducir el código manualmente</string>
 
     <string name="enter_room_code">Introducir código de sala</string>
-    <string name="code_placeholder">p. ej. A3KX9p</string>
+    <string name="code_placeholder">p. ej. %1$s</string>
     <string name="joining">Uniéndote…</string>
     <string name="join">Jugar</string>
     <string name="cancel">Cancelar</string>
@@ -55,10 +55,13 @@
     <string name="error_server_unreachable">No se pudo conectar con el servidor. Inténtalo de nuevo.</string>
     <string name="error_server_unreachable_short">No se pudo conectar con el servidor.</string>
     <string name="action_retry">Reintentar</string>
-    <!-- Game catalog copy (keyed by manifest game id) -->
-    <string name="game_hexstacker_players">1–8 jugadores</string>
-    <string name="game_tinytrack_players">1–4 jugadores</string>
-    <string name="game_powder_players">1–4 jugadores</string>
+    <plurals name="game_players_range">
+        <item quantity="other">%1$d–%2$d jugadores</item>
+    </plurals>
+    <plurals name="game_players_count">
+        <item quantity="one">%1$d jugador</item>
+        <item quantity="other">%1$d jugadores</item>
+    </plurals>
     <string name="play_step_scan">Escanea el código de sala que aparece para jugar.</string>
     <string name="version_label">Versión %1$s</string>
 </resources>

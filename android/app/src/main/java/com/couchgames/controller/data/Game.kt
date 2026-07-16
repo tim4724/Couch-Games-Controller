@@ -10,6 +10,11 @@ import org.json.JSONObject
 const val BASE58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 const val ROOM_CODE_LENGTH = 6
 
+// Illustrative code shown in the entry field's placeholder — never a real room, just
+// the shape (Base58, six chars) a typed/scanned code takes. Passed into code_placeholder
+// so the "e.g." copy stays localized while the sample lives in one place.
+const val SAMPLE_ROOM_CODE = "A3KX9p"
+
 /** Suite indigo — the accent for games with no (valid) accentColor of their own. */
 val DefaultAccent = Color(0xFF6C5CE7)
 
@@ -18,7 +23,8 @@ data class Game(
   val id: String,
   val name: String,
   val status: String,            // "live" | "soon"
-  val players: String? = null,   // display copy, e.g. "1–8 players"
+  val minPlayers: Int? = null,   // player-count range endpoints, e.g. 1..8;
+  val maxPlayers: Int? = null,   // rendered via the game_players_* plurals (GameSheets)
   val video: String? = null,     // https URL of a muted gameplay loop, cached on demand (TrailerCache)
   val accentColor: Color,
   val art: String?,              // asset-relative path, e.g. "artwork/hexstacker-16x9.webp"
@@ -48,7 +54,7 @@ object GamesManifest {
    * There is no in-band schema version — the latest served JSON is the truth,
    * and a breaking rework (if ever) ships under a new manifest URL.
    */
-  fun parse(text: String, context: Context): List<Game>? = runCatching {
+  fun parse(text: String): List<Game>? = runCatching {
     val games = JSONObject(text).getJSONArray("games")
     if (games.length() == 0) return@runCatching null
     (0 until games.length()).map { i ->
@@ -59,8 +65,10 @@ object GamesManifest {
         id = id,
         name = g.getString("name"),
         status = g.optString("status", "soon"),
-        // Per-game display copy lives in string resources, keyed by game id.
-        players = context.optStringByName("game_${id}_players"),
+        // Player counts are structural data; the display copy is rendered from them
+        // via the shared game_players_* plurals (GameSheets), not stored per game.
+        minPlayers = g.optIntOrNull("minPlayers"),
+        maxPlayers = g.optIntOrNull("maxPlayers"),
         video = g.optHttpsUrl("video"),
         accentColor = parseHexColor(g.optString("accentColor", "")),
         art = g.optNonBlank("art")?.removePrefix("/"),
@@ -74,7 +82,7 @@ object GamesManifest {
   /** The manifest shipped in assets — the seed every install can fall back to. Never throws. */
   fun loadBundled(context: Context): List<Game> = runCatching {
     context.assets.open("games-manifest.json").bufferedReader().use { it.readText() }
-  }.getOrNull()?.let { parse(it, context) } ?: emptyList()
+  }.getOrNull()?.let { parse(it) } ?: emptyList()
 }
 
 /**
@@ -97,11 +105,9 @@ private fun JSONObject.optNonBlank(name: String): String? = optString(name, "").
 private fun JSONObject.optHttpsUrl(name: String): String? =
   optNonBlank(name)?.takeIf { it.startsWith("https://") }
 
-/** Resolves a string resource by name (e.g. "game_hexstacker_players"); null if absent or blank. */
-private fun Context.optStringByName(name: String): String? {
-  val resId = resources.getIdentifier(name, "string", packageName)
-  return if (resId != 0) getString(resId).ifBlank { null } else null
-}
+/** A positive integer field, or null if absent/blank/non-numeric. */
+private fun JSONObject.optIntOrNull(name: String): Int? =
+  if (has(name) && !isNull(name)) optInt(name).takeIf { it > 0 } else null
 
 fun parseHexColor(hex: String): Color = runCatching {
   val c = hex.removePrefix("#")

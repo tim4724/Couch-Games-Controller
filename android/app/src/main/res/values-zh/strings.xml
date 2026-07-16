@@ -13,7 +13,7 @@
     <string name="enter_code_manually">手动输入代码</string>
 
     <string name="enter_room_code">输入房间代码</string>
-    <string name="code_placeholder">例如 A3KX9p</string>
+    <string name="code_placeholder">例如 %1$s</string>
     <string name="joining">加入中…</string>
     <string name="join">开始游戏</string>
     <string name="cancel">取消</string>
@@ -55,10 +55,12 @@
     <string name="error_server_unreachable">无法连接服务器，请重试。</string>
     <string name="error_server_unreachable_short">无法连接服务器。</string>
     <string name="action_retry">重试</string>
-    <!-- Game catalog copy (keyed by manifest game id) -->
-    <string name="game_hexstacker_players">1–8 人</string>
-    <string name="game_tinytrack_players">1–4 人</string>
-    <string name="game_powder_players">1–4 人</string>
+    <plurals name="game_players_range">
+        <item quantity="other">%1$d–%2$d 人</item>
+    </plurals>
+    <plurals name="game_players_count">
+        <item quantity="other">%1$d 人</item>
+    </plurals>
     <string name="play_step_scan">扫描显示的房间码即可开始游戏。</string>
     <string name="version_label">版本 %1$s</string>
 </resources>

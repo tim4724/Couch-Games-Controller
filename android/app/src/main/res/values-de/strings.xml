@@ -13,7 +13,7 @@
     <string name="enter_code_manually">Code manuell eingeben</string>
 
     <string name="enter_room_code">Raumcode eingeben</string>
-    <string name="code_placeholder">z.&#160;B. A3KX9p</string>
+    <string name="code_placeholder">z.&#160;B. %1$s</string>
     <string name="joining">Trete bei…</string>
     <string name="join">Spielen</string>
     <string name="cancel">Abbrechen</string>
@@ -55,10 +55,13 @@
     <string name="error_server_unreachable">Server nicht erreichbar. Versuch es erneut.</string>
     <string name="error_server_unreachable_short">Server nicht erreichbar.</string>
     <string name="action_retry">Erneut versuchen</string>
-    <!-- Game catalog copy (keyed by manifest game id) -->
-    <string name="game_hexstacker_players">1–8 Spieler</string>
-    <string name="game_tinytrack_players">1–4 Spieler</string>
-    <string name="game_powder_players">1–4 Spieler</string>
+    <plurals name="game_players_range">
+        <item quantity="other">%1$d–%2$d Spieler</item>
+    </plurals>
+    <plurals name="game_players_count">
+        <item quantity="one">%1$d Spieler</item>
+        <item quantity="other">%1$d Spieler</item>
+    </plurals>
     <string name="play_step_scan">Scanne den angezeigten Raumcode, um zu spielen.</string>
     <string name="version_label">Version %1$s</string>
 </resources>

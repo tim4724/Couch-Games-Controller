@@ -96,6 +96,7 @@ import com.couchgames.controller.data.Profile
 import com.couchgames.controller.data.ProfileStore
 import com.couchgames.controller.data.RecentRoom
 import com.couchgames.controller.data.RecentRoomStore
+import com.couchgames.controller.data.SAMPLE_ROOM_CODE
 import com.couchgames.controller.data.RoomDirectory
 import com.couchgames.controller.data.RoomLookup
 import com.couchgames.controller.data.resolveTypedCode
@@ -703,7 +704,7 @@ private fun CodeEntryDialog(
       OutlinedTextField(
         value = code,
         onValueChange = { if (it.length <= 16) code = it },
-        placeholder = { Text(stringResource(R.string.code_placeholder)) },
+        placeholder = { Text(stringResource(R.string.code_placeholder, SAMPLE_ROOM_CODE)) },
         singleLine = true,
         isError = error != null,
         supportingText = { if (error != null) Text(error) },

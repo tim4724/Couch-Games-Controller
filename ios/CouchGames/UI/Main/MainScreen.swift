@@ -200,7 +200,7 @@ struct MainScreen: View {
             }
         }
         .alert("Enter room code", isPresented: $showCodeEntry) {
-            TextField("e.g. A3KX9p", text: $codeText)
+            TextField("e.g. \(CG.sampleRoomCode)", text: $codeText)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
             Button("Cancel", role: .cancel) { codeError = nil }

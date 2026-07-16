@@ -3,8 +3,8 @@
 
 Verifies that Android and iOS ship the same translations for the same texts:
 
-  1. Android: every values-XX/strings.xml has exactly the translatable keys of
-     values/strings.xml (no missing, no extra).
+  1. Android: every values-XX/strings.xml has exactly the translatable <string>
+     keys and <plurals> names of values/strings.xml (no missing, no extra).
   2. iOS: every Localizable.xcstrings key (unless shouldTranslate=false) has a
      "translated" unit for every locale; same for InfoPlist.xcstrings.
   3. Cross-platform: Android keys and iOS keys are matched via the English
@@ -13,8 +13,11 @@ Verifies that Android and iOS ship the same translations for the same texts:
      Strings existing on only one platform must be declared in ANDROID_ONLY /
      IOS_ONLY below — anything undeclared fails, so one-sided additions are
      caught.
-  4. games-manifest.json: android/assets and ios/Resources copies are
-     byte-identical, and every display-copy map carries all 11 locales.
+  4. Plurals (the player-count copy): the <plurals>/substitution KEYS match
+     across platforms and every locale is present. The per-CLDR-category forms
+     differ, so they're coverage-checked, not value-matched.
+  5. games-manifest.json: android/assets and ios/Resources copies are
+     byte-identical and purely structural (no per-locale copy leaked in).
 
 Run from anywhere: python3 tools/check_l10n_sync.py
 Exit code 0 = in sync, 1 = problems (listed on stdout).
@@ -104,7 +107,13 @@ def load_android_strings(path):
     return out
 
 
+def load_android_plurals(path):
+    """strings.xml -> {plurals name}; count copy lives in <plurals>, not <string>."""
+    return {el.get("name") for el in ET.parse(path).getroot() if el.tag == "plurals"}
+
+
 android_en = load_android_strings(ANDROID_RES / "values/strings.xml")
+android_plurals_en = load_android_plurals(ANDROID_RES / "values/strings.xml")
 android = {}  # locale -> {key: value}
 for loc in LOCALES:
     path = ANDROID_RES / f"values-{loc}/strings.xml"
@@ -118,34 +127,46 @@ for loc in LOCALES:
         problem("android", f"values-{loc}: missing key '{k}'")
     for k in sorted(extra):
         problem("android", f"values-{loc}: extra key '{k}' (not in values/)")
+    plurals = load_android_plurals(path)
+    for k in sorted(android_plurals_en - plurals):
+        problem("android", f"values-{loc}: missing plurals '{k}'")
+    for k in sorted(plurals - android_plurals_en):
+        problem("android", f"values-{loc}: extra plurals '{k}' (not in values/)")
 
 # --- iOS ---------------------------------------------------------------------
 
 def load_xcstrings(path):
-    """xcstrings -> {key: {locale: value}}; skips shouldTranslate=false."""
+    """xcstrings -> (strings {key:{loc:value}}, plurals {key:{locales}}); skips
+    shouldTranslate=false. Plural/substitution entries (the count copy) are returned
+    separately: their per-CLDR-category forms aren't a single string to compare, so
+    they're coverage-checked, not value-matched."""
     data = json.loads(path.read_text())
-    out = {}
+    strings, plurals = {}, {}
     for key, entry in data["strings"].items():
         if entry.get("shouldTranslate") is False:
             continue
+        locs = entry.get("localizations", {})
+        if any("variations" in u or "substitutions" in u for u in locs.values()):
+            plurals[key] = set(locs.keys())
+            continue
         units = {}
-        for loc, unit in entry.get("localizations", {}).items():
+        for loc, unit in locs.items():
             su = unit.get("stringUnit", {})
             if su.get("state") != "translated":
                 problem("ios", f"{path.name}: '{key}' [{loc}] state is "
                                f"'{su.get('state')}', expected 'translated'")
             units[loc] = su.get("value", "")
-        out[key] = units
-    return out
+        strings[key] = units
+    return strings, plurals
 
 
-ios = load_xcstrings(IOS_RESOURCES / "Localizable.xcstrings")
+ios, ios_plurals = load_xcstrings(IOS_RESOURCES / "Localizable.xcstrings")
 for key, units in ios.items():
     for loc in LOCALES:
         if loc not in units:
             problem("ios", f"Localizable.xcstrings: '{key}' missing locale '{loc}'")
 
-infoplist = load_xcstrings(IOS_RESOURCES / "InfoPlist.xcstrings")
+infoplist, _ = load_xcstrings(IOS_RESOURCES / "InfoPlist.xcstrings")
 for key, units in infoplist.items():
     for loc in LOCALES:
         if loc not in units:
@@ -157,7 +178,7 @@ ios_by_norm = {normalize(k): k for k in ios}
 matched_ios = set()
 
 for key, en_value in sorted(android_en.items()):
-    # game_<id>_* copy uses the same identifier key on both platforms; the rest
+    # Symbolic keys shared verbatim across platforms match by key; everything else
     # matches Android's English value against iOS's source-string key.
     ios_key = key if key in ios else ios_by_norm.get(normalize(en_value))
     if ios_key is None:
@@ -186,6 +207,19 @@ for ios_key in sorted(IOS_ONLY & matched_ios):
     problem("sync", f"iOS '{ios_key}' is declared IOS_ONLY but matched an "
                     f"Android key — remove the declaration")
 
+# --- Plurals (player-count copy) ---------------------------------------------
+# Count copy is <plurals> on Android and plural/substitution entries on iOS. The
+# per-form strings differ by CLDR category (and by platform format specifier), so
+# verify the KEYS match across platforms and every locale is present on iOS, rather
+# than comparing values. Android per-locale plurals coverage is checked above.
+for key in sorted(ios_plurals):
+    for loc in LOCALES:
+        if loc not in ios_plurals[key]:
+            problem("ios", f"Localizable.xcstrings: plural '{key}' missing locale '{loc}'")
+if android_plurals_en != set(ios_plurals):
+    problem("sync", f"plural keys differ across platforms — android "
+                    f"{sorted(android_plurals_en)} vs ios {sorted(ios_plurals)}")
+
 # --- games-manifest.json -----------------------------------------------------
 
 blobs = [p.read_bytes() for p in MANIFESTS]
@@ -193,25 +227,15 @@ if blobs[0] != blobs[1]:
     problem("manifest", "android/assets and ios/Resources copies are not "
                         "byte-identical — copy one over the other")
 
-# The manifest is purely structural: no translated copy lives here (it moved to
-# string resources, keyed by game id). Enforce both halves of that invariant.
-manifest_ids = set()
+# The manifest is purely structural — counts and flags are numbers/enums, never
+# translated copy (that lives in string resources: shared plurals/strings, not
+# per-game keys). A per-locale map in any field means copy leaked back in.
 for game in json.loads(blobs[0]).get("games", []):
     gid = game.get("id", "?")
-    manifest_ids.add(gid)
     for field, value in game.items():
         if isinstance(value, dict) and value.keys() & set(LOCALES):
             problem("manifest", f"{gid}.{field}: per-locale map in the manifest — "
-                                f"translated copy belongs in string resources, "
-                                f"keyed by game id (e.g. game_{gid}_{field})")
-
-# Every per-game copy string must reference a game that still exists.
-game_key = re.compile(r"^game_(.+)_(?:players|tagline)$")
-for key in set(android_en) | set(ios):
-    m = game_key.match(key)
-    if m and m.group(1) not in manifest_ids:
-        problem("manifest", f"string '{key}' references unknown game id "
-                            f"'{m.group(1)}' (removed from the manifest?)")
+                                f"translated copy belongs in string resources")
 
 # --- Report ------------------------------------------------------------------
 

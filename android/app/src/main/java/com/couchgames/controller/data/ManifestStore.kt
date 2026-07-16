@@ -10,8 +10,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * The games list the launcher renders: the last manifest fetched from
- * couch-games.com (persisted verbatim, re-parsed per launch so per-locale copy
- * resolves against the current language), seeded from the bundled copy until a
+ * couch-games.com (persisted verbatim), seeded from the bundled copy until a
  * fetch has ever succeeded. [refresh] pulls at most once per process launch —
  * a launch-fresh list is fresh enough, and every failure silently keeps the
  * current list. Served art paths may name files this build didn't ship; GameArt
@@ -35,7 +34,7 @@ object ManifestStore {
   fun games(context: Context): StateFlow<List<Game>> {
     if (!seeded) {
       seeded = true
-      val cached = prefs(context).getString(KEY_JSON, null)?.let { GamesManifest.parse(it, context) }
+      val cached = prefs(context).getString(KEY_JSON, null)?.let { GamesManifest.parse(it) }
       flow.value = cached ?: GamesManifest.loadBundled(context)
     }
     return flow
@@ -49,7 +48,7 @@ object ManifestStore {
     // Identical to the seeded copy (the common case every launch) — the current
     // list already reflects it, so skip the re-parse and the prefs rewrite.
     if (text == prefs(context).getString(KEY_JSON, null)) return
-    val games = GamesManifest.parse(text, context) ?: return
+    val games = GamesManifest.parse(text) ?: return
     prefs(context).edit { putString(KEY_JSON, text) }
     flow.value = games
   }

@@ -4,6 +4,8 @@
       "id": "hexstacker",
       "name": "HexStacker",
       "status": "live",
+      "minPlayers": 1,
+      "maxPlayers": 8,
       "art": "/artwork/hexstacker-16x9.webp",
       "video": "https://hexstacker.com/artwork/trailer.mp4",
       "accentColor": "#FF6B6B",
@@ -17,6 +19,8 @@
       "id": "tinytrack",
       "name": "Tiny Track",
       "status": "soon",
+      "minPlayers": 1,
+      "maxPlayers": 4,
       "art": "/artwork/tinytrack-16x9.webp",
       "accentColor": "#4ECDC4"
     },
@@ -24,6 +28,8 @@
       "id": "powder",
       "name": "Powder",
       "status": "soon",
+      "minPlayers": 1,
+      "maxPlayers": 4,
       "art": "/artwork/powder-16x9.webp",
       "accentColor": "#A78BFA"
     }

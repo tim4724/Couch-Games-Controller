@@ -8,6 +8,10 @@ enum CG {
     /// per game: Base58 (case-sensitive, excludes 0 O I l), six characters.
     static let base58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
     static let roomCodeLength = 6
+    /// Illustrative code shown in the entry field's placeholder — never a real room, just
+    /// the shape (Base58, six chars) a typed/scanned code takes. Kept in one place so the
+    /// "e.g." copy stays localized while the sample doesn't repeat across translations.
+    static let sampleRoomCode = "A3KX9p"
     /// Fallback accent ("suite indigo") for missing/invalid accent colors and the synthetic launcher.
     static let defaultAccent = Color(cgHex: 0x6C5CE7)
     /// Shared relay for all games; doubles as the room -> controller directory. No trailing slash.
@@ -66,7 +70,8 @@ struct Game: Identifiable, Hashable {
     let id: String
     let name: String
     let status: String
-    let players: String?
+    let minPlayers: Int?     // player-count range endpoints, e.g. 1...8;
+    let maxPlayers: Int?     // rendered via the game_players_* plurals (playersLabel)
     let video: String?
     let accentColor: Color
     let art: String?
@@ -75,13 +80,14 @@ struct Game: Identifiable, Hashable {
     let relayProbeBase: String?
 
     init(id: String, name: String, status: String = "soon",
-         players: String? = nil, video: String? = nil, accentColor: Color = CG.defaultAccent,
+         minPlayers: Int? = nil, maxPlayers: Int? = nil, video: String? = nil, accentColor: Color = CG.defaultAccent,
          art: String? = nil, controllerBaseUrl: String? = nil, hosts: [String] = [],
          relayProbeBase: String? = nil) {
         self.id = id
         self.name = name
         self.status = status
-        self.players = players
+        self.minPlayers = minPlayers
+        self.maxPlayers = maxPlayers
         self.video = video
         self.accentColor = accentColor
         self.art = art
@@ -99,6 +105,19 @@ struct Game: Identifiable, Hashable {
     /// The host component of controllerBaseUrl — what's shown to users as the game's domain.
     var displayHost: String? { controllerBaseUrl.flatMap { URL(string: $0)?.host } }
 
+    /// The player-count line ("1–8 players"), rendered from the manifest's count range
+    /// through the shared plurals so the noun agrees with the count (Russian: "1–4 игрока"
+    /// vs "1–8 игроков"; the range agrees with the max). A single-count game (min == max)
+    /// uses the plain-count plural. Nil when the manifest gives no counts.
+    var playersLabel: String? {
+        guard let lo = minPlayers, let hi = maxPlayers else { return nil }
+        let key = lo == hi ? "game_players_count" : "game_players_range"
+        let format = NSLocalizedString(key, comment: "")
+        return lo == hi
+            ? String.localizedStringWithFormat(format, lo)
+            : String.localizedStringWithFormat(format, lo, hi)
+    }
+
     /// Used only for unknown couch-games.com subdomains.
     static let syntheticLauncher = Game(id: "couch-games", name: "Couch Games", status: "live")
 }
@@ -113,12 +132,12 @@ enum GamesManifest {
     /// games list → nil, so a bad fetch can never half-apply over a good list.
     /// There is no in-band schema version — the latest served JSON is the truth,
     /// and a breaking rework (if ever) ships under a new manifest URL.
-    static func parse(_ data: Data, bundle: Bundle = .main) -> [Game]? {
+    static func parse(_ data: Data) -> [Game]? {
         guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let entries = root["games"] as? [Any], !entries.isEmpty else {
             return nil
         }
-        return try? entries.map { try parseGame($0, bundle: bundle) }
+        return try? entries.map { try parseGame($0) }
     }
 
     /// Loads "games-manifest.json" from the bundle — the seed every install can
@@ -128,10 +147,10 @@ enum GamesManifest {
               let data = try? Data(contentsOf: url) else {
             return []
         }
-        return parse(data, bundle: bundle) ?? []
+        return parse(data) ?? []
     }
 
-    private static func parseGame(_ raw: Any, bundle: Bundle) throws -> Game {
+    private static func parseGame(_ raw: Any) throws -> Game {
         guard let obj = raw as? [String: Any],
               let id = obj["id"] as? String,
               let name = obj["name"] as? String else {
@@ -139,8 +158,10 @@ enum GamesManifest {
         }
 
         let status = (obj["status"] as? String) ?? "soon"
-        // Per-game display copy lives in string resources, keyed by game id.
-        let players = localizedByKey("game_\(id)_players", bundle: bundle)
+        // Player counts are structural data; the display copy is rendered from them
+        // via the shared game_players_* plurals (Game.playersLabel), not stored per game.
+        let minPlayers = optPositiveInt(obj["minPlayers"])
+        let maxPlayers = optPositiveInt(obj["maxPlayers"])
         // A trailer is an https URL, fetched to cache on demand (TrailerCache).
         let video = httpsURL(obj["video"])
         let accentColor = parseHexColor((obj["accentColor"] as? String) ?? "")
@@ -162,16 +183,15 @@ enum GamesManifest {
         let hosts = (obj["hosts"] as? [Any])?.compactMap { $0 as? String } ?? []
 
         return Game(id: id, name: name, status: status,
-                    players: players, video: video, accentColor: accentColor,
+                    minPlayers: minPlayers, maxPlayers: maxPlayers, video: video, accentColor: accentColor,
                     art: art, controllerBaseUrl: controllerBaseUrl, hosts: hosts,
                     relayProbeBase: relayProbeBase)
     }
 
-    /// Resolves a string resource by key (e.g. "game_hexstacker_players"); nil if absent or blank.
-    private static func localizedByKey(_ key: String, bundle: Bundle) -> String? {
-        let sentinel = "\u{0}"
-        let value = bundle.localizedString(forKey: key, value: sentinel, table: nil)
-        return value == sentinel ? nil : blankToNil(value)
+    /// A positive Int from a JSON value, or nil if absent/non-numeric/≤0.
+    private static func optPositiveInt(_ value: Any?) -> Int? {
+        guard let n = value as? Int, n > 0 else { return nil }
+        return n
     }
 
     /// Absent, non-string, empty, or whitespace-only → nil.

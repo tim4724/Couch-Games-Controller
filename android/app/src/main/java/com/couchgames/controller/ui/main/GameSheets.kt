@@ -25,8 +25,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.couchgames.controller.R
 import com.couchgames.controller.data.Game
 import com.couchgames.controller.data.TrailerCache
 import com.couchgames.controller.ui.components.AppSheet
@@ -66,7 +68,7 @@ fun GameInfoSheet(
           PosterStatusChip(game, Modifier.align(Alignment.BottomEnd).padding(14.dp))
         }
       }
-      game.players?.let {
+      game.playersLabel()?.let {
         Text(it, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
       }
       if (game.isLive) {
@@ -74,6 +76,23 @@ fun GameInfoSheet(
         JoinButtons(onScan = onScan, onEnterCode = onEnterCode)
       }
     }
+  }
+}
+
+/**
+ * The player-count line ("1–8 players"), rendered from the manifest's count range
+ * through the shared plurals so the noun agrees with the count (Russian: "1–4
+ * игрока" vs "1–8 игроков"; the range agrees with the max). A single-count game
+ * (min == max) uses the plain-count plural. Null when the manifest gives no counts.
+ */
+@Composable
+fun Game.playersLabel(): String? {
+  val min = minPlayers ?: return null
+  val max = maxPlayers ?: return null
+  return if (min == max) {
+    pluralStringResource(R.plurals.game_players_count, min, min)
+  } else {
+    pluralStringResource(R.plurals.game_players_range, max, min, max)
   }
 }
 

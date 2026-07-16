@@ -62,6 +62,9 @@ class StoreScreenshotTest {
 
   private fun str(id: Int, vararg args: Any): String = appContext.getString(id, *args)
 
+  private fun plural(id: Int, quantity: Int, vararg args: Any): String =
+    appContext.resources.getQuantityString(id, quantity, *args)
+
   @Before
   fun seedProfile() {
     // First launch mints a random FunnyName — pin the name BEFORE the activity starts
@@ -122,7 +125,8 @@ class StoreScreenshotTest {
 
     // ---- Game info sheet: manifest copy + join actions for the live game ----
     compose.onNodeWithText("HexStacker").performClick()
-    waitForText(str(R.string.game_hexstacker_players))
+    // HexStacker is 1–8 players: the range plural, agreeing with the max (e.g. "1–8 players").
+    waitForText(plural(R.plurals.game_players_range, 8, 1, 8))
     compose.onNodeWithText(str(R.string.play_step_scan)).assertIsDisplayed()
     // Both the sheet and the home join card behind it carry the two join buttons.
     compose.onAllNodesWithText(str(R.string.scan_code)).assertCountEquals(2)
@@ -132,7 +136,7 @@ class StoreScreenshotTest {
     Thread.sleep(4_000)
     screenshot("02-game-info-$suffix")
     Espresso.pressBack()
-    waitForTextGone(str(R.string.game_hexstacker_players))
+    waitForTextGone(plural(R.plurals.game_players_range, 8, 1, 8))
 
     // ---- Profile sheet: blank-name gating + persistence round-trip ----
     compose.onNodeWithText(PLAYER_NAME).performClick()

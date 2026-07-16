@@ -46,8 +46,7 @@ enum ProfileStore {
 // MARK: - ManifestStore
 
 /// The games list the launcher renders: the last manifest fetched from
-/// couch-games.com (persisted verbatim, re-parsed per launch so per-locale copy
-/// resolves against the current language), seeded from the bundled copy until a
+/// couch-games.com (persisted verbatim), seeded from the bundled copy until a
 /// fetch has ever succeeded. `refresh()` pulls at most once per process launch —
 /// a launch-fresh list is fresh enough, and every failure silently keeps the
 /// current list. Served art paths may name files this build didn't ship; ArtCache

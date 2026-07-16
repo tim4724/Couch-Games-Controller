@@ -14,7 +14,7 @@
     <string name="enter_code_manually">コードを手動で入力</string>
 
     <string name="enter_room_code">ルームコードを入力</string>
-    <string name="code_placeholder">例: A3KX9p</string>
+    <string name="code_placeholder">例: %1$s</string>
     <string name="joining">参加中…</string>
     <string name="join">プレイ</string>
     <string name="cancel">キャンセル</string>
@@ -56,10 +56,12 @@
     <string name="error_server_unreachable">サーバーに接続できませんでした。もう一度お試しください。</string>
     <string name="error_server_unreachable_short">サーバーに接続できませんでした。</string>
     <string name="action_retry">再試行</string>
-    <!-- Game catalog copy (keyed by manifest game id) -->
-    <string name="game_hexstacker_players">1〜8人</string>
-    <string name="game_tinytrack_players">1〜4人</string>
-    <string name="game_powder_players">1〜4人</string>
+    <plurals name="game_players_range">
+        <item quantity="other">%1$d〜%2$d人</item>
+    </plurals>
+    <plurals name="game_players_count">
+        <item quantity="other">%1$d人</item>
+    </plurals>
     <string name="play_step_scan">表示されたルームコードをスキャンしてプレイ。</string>
     <string name="version_label">バージョン %1$s</string>
 </resources>

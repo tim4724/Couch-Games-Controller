@@ -41,7 +41,7 @@ struct GameInfoSheet: View {
                 }
             }
 
-            if let players = game.players {
+            if let players = game.playersLabel {
                 Text(players)
                     .font(.cgTitleMedium)
                     .foregroundStyle(palette.primary)

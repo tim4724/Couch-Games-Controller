@@ -13,7 +13,7 @@
     <string name="enter_code_manually">Digitar o código manualmente</string>
 
     <string name="enter_room_code">Digitar código da sala</string>
-    <string name="code_placeholder">ex.: A3KX9p</string>
+    <string name="code_placeholder">ex.: %1$s</string>
     <string name="joining">Entrando…</string>
     <string name="join">Jogar</string>
     <string name="cancel">Cancelar</string>
@@ -55,10 +55,13 @@
     <string name="error_server_unreachable">Não foi possível conectar ao servidor. Tente de novo.</string>
     <string name="error_server_unreachable_short">Não foi possível conectar ao servidor.</string>
     <string name="action_retry">Tentar novamente</string>
-    <!-- Game catalog copy (keyed by manifest game id) -->
-    <string name="game_hexstacker_players">1–8 jogadores</string>
-    <string name="game_tinytrack_players">1–4 jogadores</string>
-    <string name="game_powder_players">1–4 jogadores</string>
+    <plurals name="game_players_range">
+        <item quantity="other">%1$d–%2$d jogadores</item>
+    </plurals>
+    <plurals name="game_players_count">
+        <item quantity="one">%1$d jogador</item>
+        <item quantity="other">%1$d jogadores</item>
+    </plurals>
     <string name="play_step_scan">Escaneie o código da sala exibido para jogar.</string>
     <string name="version_label">Versão %1$s</string>
 </resources>

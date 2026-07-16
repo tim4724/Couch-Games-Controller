@@ -2,6 +2,7 @@ package com.couchgames.controller.data
 
 import android.net.Uri
 import androidx.annotation.StringRes
+import androidx.core.net.toUri
 import com.couchgames.controller.BuildConfig
 import com.couchgames.controller.R
 
@@ -66,7 +67,7 @@ object JoinResolver {
     val s = raw?.trim().orEmpty()
     if (s.isEmpty()) return JoinOutcome.Failure(R.string.error_empty_code)
 
-    val uri = runCatching { Uri.parse(s) }.getOrNull()
+    val uri = runCatching { s.toUri() }.getOrNull()
     val host = uri?.host
     if (uri?.scheme == null || host == null) {
       // Bare code — no origin to load; the sole live game hosts it.

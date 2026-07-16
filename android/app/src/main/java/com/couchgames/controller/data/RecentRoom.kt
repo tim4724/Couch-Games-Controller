@@ -2,6 +2,7 @@ package com.couchgames.controller.data
 
 import android.graphics.Bitmap
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.core.graphics.scale
 import androidx.compose.ui.graphics.asImageBitmap
 
 /** A captured favicon plus whether its opaque content reads as light. */
@@ -95,7 +96,7 @@ object RecentRoomStore {
 // apple-touch-icon included) and it's one getPixels() read, not hundreds of getPixel().
 private fun Bitmap.contentIsLight(): Boolean {
   val side = 16
-  val small = Bitmap.createScaledBitmap(this, side, side, true)
+  val small = scale(side, side)
   val px = IntArray(side * side)
   small.getPixels(px, 0, side, 0, 0, side, side)
   if (small !== this) small.recycle()

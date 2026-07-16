@@ -80,7 +80,7 @@ fun MainNavigation(deepLink: String? = null, onDeepLinkConsumed: () -> Unit = {}
           // The marketing site is a full website, not a legal doc, so it opens in
           // the system browser rather than the in-app WebDocScreen viewer.
           onOpenWebsite = {
-            val language = context.resources.configuration.locales[0].language
+            val language = resources.configuration.locales[0].language
             context.startActivity(
               Intent(Intent.ACTION_VIEW, LegalLinks.websiteUrl(language).toUri())
             )

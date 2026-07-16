@@ -11,6 +11,7 @@ import android.net.Uri
 import android.provider.Settings
 import android.util.Size
 import androidx.activity.compose.BackHandler
+import androidx.annotation.OptIn
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.camera2.interop.Camera2CameraControl
@@ -399,7 +400,9 @@ private fun CameraPreview(
 // The square is defined on the sensor's active array, which keeps it centered
 // through the FILL_CENTER crop and any display rotation. Best-effort: devices
 // that support no metering regions (LEGACY hardware) simply skip it.
-@OptIn(ExperimentalCamera2Interop::class)
+// androidx.annotation.OptIn (not kotlin.OptIn) so lint's UnsafeOptInUsageError also
+// recognizes the opt-in for this androidx experimental interop marker.
+@OptIn(markerClass = [ExperimentalCamera2Interop::class])
 private fun applyCenterMeteringRegions(controller: CameraController) {
   val info = controller.cameraInfo ?: return
   val control = controller.cameraControl ?: return

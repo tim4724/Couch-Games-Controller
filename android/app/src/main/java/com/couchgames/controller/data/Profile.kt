@@ -1,7 +1,8 @@
 package com.couchgames.controller.data
 
 import android.content.Context
-import android.net.Uri
+import androidx.core.content.edit
+import androidx.core.net.toUri
 
 /**
  * The player's shared identity — just a name, entered once and handed to every game.
@@ -56,9 +57,9 @@ object ProfileStore {
   }
 
   fun save(context: Context, profile: Profile) {
-    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-      .putString(KEY_NAME, profile.name)
-      .apply()
+    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit {
+      putString(KEY_NAME, profile.name)
+    }
   }
 }
 
@@ -70,7 +71,7 @@ object ProfileStore {
  */
 fun withProfile(joinUrl: String, profile: Profile): String {
   if (!profile.isSet) return joinUrl
-  return Uri.parse(joinUrl).buildUpon()
+  return joinUrl.toUri().buildUpon()
     .appendQueryParameter("cgv", "1")
     .appendQueryParameter("cgName", profile.name)
     .build().toString()

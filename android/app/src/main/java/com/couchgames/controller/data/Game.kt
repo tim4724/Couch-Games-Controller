@@ -1,8 +1,8 @@
 package com.couchgames.controller.data
 
 import android.content.Context
-import android.net.Uri
 import androidx.compose.ui.graphics.Color
+import androidx.core.net.toUri
 import org.json.JSONObject
 
 // Room codes are minted by the shared relay, so the format is suite-wide, not
@@ -37,7 +37,7 @@ data class Game(
    * Host to SHOW users, from the canonical controller URL — [hosts] is the
    * security allow-list, whose ordering must not become display copy.
    */
-  val displayHost: String? get() = controllerBaseUrl?.let { runCatching { Uri.parse(it).host }.getOrNull() }
+  val displayHost: String? get() = controllerBaseUrl?.let { runCatching { it.toUri().host }.getOrNull() }
 }
 
 /** Manifest parsing — shared by the bundled seed and the served copy (ManifestStore). */

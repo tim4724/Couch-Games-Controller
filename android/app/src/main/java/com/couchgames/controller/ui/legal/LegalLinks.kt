@@ -1,6 +1,6 @@
 package com.couchgames.controller.ui.legal
 
-import android.net.Uri
+import androidx.core.net.toUri
 import com.couchgames.controller.data.LAUNCHER_HOST
 
 // Hosted legal pages, served on the launcher's own domain. Shown in-app via
@@ -38,7 +38,7 @@ object LegalLinks {
   // manifest's legal App Link filter. Returns the URL to open (locale variants like
   // /en/privacy pass through as-is), or null when it's not a legal page.
   fun scannedLegalUrl(raw: String): String? {
-    val uri = runCatching { Uri.parse(raw) }.getOrNull() ?: return null
+    val uri = runCatching { raw.toUri() }.getOrNull() ?: return null
     if (!"https".equals(uri.scheme, ignoreCase = true) || !uri.userInfo.isNullOrEmpty()) return null
     if (!uri.host.equals(LAUNCHER_HOST, ignoreCase = true)) return null
     return raw.takeIf { isPrivacy(it) || isImprint(it) }

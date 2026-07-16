@@ -1,6 +1,7 @@
 package com.couchgames.controller.data
 
 import android.content.Context
+import androidx.core.content.edit
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,7 +50,7 @@ object ManifestStore {
     // list already reflects it, so skip the re-parse and the prefs rewrite.
     if (text == prefs(context).getString(KEY_JSON, null)) return
     val games = GamesManifest.parse(text, context) ?: return
-    prefs(context).edit().putString(KEY_JSON, text).apply()
+    prefs(context).edit { putString(KEY_JSON, text) }
     flow.value = games
   }
 

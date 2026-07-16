@@ -34,38 +34,13 @@ struct WebDocScreen: View {
                 ProgressView()
             }
             if failed {
-                WebDocErrorView { reloadToken += 1 }
+                RetryCover(background: palette.background, foreground: palette.onBackground) {
+                    reloadToken += 1
+                }
             }
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-/// Shown over the web view when the document can't be loaded, so the player sees a
-/// clear message and a way out instead of a blank surface. Reuses the join flow's
-/// "couldn't reach the server" copy — same cause, already localized.
-private struct WebDocErrorView: View {
-    @Environment(\.cgPalette) private var palette
-    let onRetry: () -> Void
-
-    var body: some View {
-        ZStack {
-            palette.background.ignoresSafeArea()
-            VStack(spacing: 24) {
-                // Short form — the Retry button already says "try again".
-                Text(String(localized: "Couldn’t reach the server."))
-                    .font(.cgBodyLarge)
-                    .foregroundStyle(palette.onBackground)
-                    .multilineTextAlignment(.center)
-                Button(action: onRetry) {
-                    Text(String(localized: "Try again")).font(.cgTitleMedium)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(palette.primary)
-            }
-            .padding(.horizontal, 32)
-        }
     }
 }
 
@@ -212,15 +187,11 @@ private struct WebDocView: UIViewRepresentable {
         }
 
         // A real load failure (offline, host unreachable, TLS/timeout) surfaces the
-        // error state. Not every "failure" is one: cancelling a navigation in
-        // decidePolicyFor (external links and the cross-doc push both do) fires here
-        // with NSURLErrorCancelled or WebKit's frame-load-interrupted (102) — those
-        // are deliberate, so ignore them.
+        // error state; a deliberately-cancelled navigation (external links, the
+        // cross-doc push) is not one.
         private func reportLoadFailure(_ error: Error) {
             setLoading(false)
-            let ns = error as NSError
-            if ns.domain == NSURLErrorDomain, ns.code == NSURLErrorCancelled { return }
-            if ns.domain == "WebKitErrorDomain", ns.code == 102 { return }
+            if isDeliberateNavigationCancellation(error) { return }
             setFailed(true)
         }
     }

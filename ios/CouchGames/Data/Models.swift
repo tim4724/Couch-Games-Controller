@@ -173,12 +173,7 @@ enum GamesManifest {
 
         let controllerBaseUrl = httpsURL(obj["controllerBaseUrl"])
 
-        var relayProbeBase = httpsURL(obj["relayProbeBase"])
-        if let r = relayProbeBase {
-            var stripped = r
-            while stripped.hasSuffix("/") { stripped.removeLast() }
-            relayProbeBase = stripped
-        }
+        let relayProbeBase = httpsURL(obj["relayProbeBase"])?.trimmingTrailingSlashes()
 
         let hosts = (obj["hosts"] as? [Any])?.compactMap { $0 as? String } ?? []
 
@@ -282,6 +277,15 @@ func androidUriEncode(_ s: String) -> String {
         }
     }
     return out
+}
+
+extension String {
+    /// Drop any trailing "/" so a base URL concatenates cleanly with "/" + code.
+    func trimmingTrailingSlashes() -> String {
+        var stripped = self
+        while stripped.hasSuffix("/") { stripped.removeLast() }
+        return stripped
+    }
 }
 
 // MARK: - Profile

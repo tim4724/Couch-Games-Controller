@@ -158,9 +158,9 @@ fun MainScreen(
 
   // Every failure surface — a bad link, a dead room — pairs the toast with a
   // rejection buzz, mirroring iOS's error haptic.
-  fun fail(messageRes: Int, length: Int = Toast.LENGTH_SHORT) {
+  fun fail(messageRes: Int) {
     haptics.performHapticFeedback(HapticFeedbackType.Reject)
-    Toast.makeText(context, resources.getString(messageRes), length).show()
+    Toast.makeText(context, resources.getString(messageRes), Toast.LENGTH_SHORT).show()
   }
 
   fun perform(action: AfterName, p: Profile) {

@@ -108,10 +108,7 @@ enum JoinResolver {
             return .failure(message: String(localized: "That code isn’t a Couch Games room."))
         }
 
-        var stripped = base
-        while stripped.hasSuffix("/") { stripped.removeLast() }
-
-        var joinUrl = stripped + "/" + roomCode
+        var joinUrl = base.trimmingTrailingSlashes() + "/" + roomCode
         if let claim, !claim.isEmpty {
             joinUrl += "?claim=" + androidUriEncode(claim)
         }

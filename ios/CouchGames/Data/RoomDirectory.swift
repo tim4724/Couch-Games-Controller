@@ -106,9 +106,7 @@ func resolveTypedCode(_ code: String, games: [Game]) async -> JoinOutcome {
     // that origin. Untrusted; the resolver host-checks it against the allow-list.
     for result in results {
         if case .found(_, let origin) = result, let origin {
-            var stripped = origin
-            while stripped.hasSuffix("/") { stripped.removeLast() }
-            return JoinResolver.resolve(stripped + "/" + trimmed, games: games)
+            return JoinResolver.resolve(origin.trimmingTrailingSlashes() + "/" + trimmed, games: games)
         }
     }
 

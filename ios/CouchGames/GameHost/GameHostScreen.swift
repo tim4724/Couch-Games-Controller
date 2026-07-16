@@ -201,30 +201,14 @@ struct GameHostScreen: View {
             }
     }
 
+    // No Leave button here — the Leave bar's X already exits.
     private var retryCover: some View {
-        hostPalette.surface
-            .ignoresSafeArea()
-            .overlay {
-                VStack(spacing: 16) {
-                    // Short form — the Retry button already says "try again".
-                    Text("Couldn’t reach the server.")
-                        .font(.cgBodyLarge)
-                        .foregroundStyle(hostPalette.onSurface)
-                        .multilineTextAlignment(.center)
-                    Button {
-                        // Retry in place: clear the error, bring the join cover back, reload.
-                        failed = false
-                        loading = true
-                        reloadToken += 1
-                    } label: {
-                        Text("Try again").font(.cgTitleMedium)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(hostPalette.primary)
-                    // No Leave button here — the Leave bar's X already exits.
-                }
-                .padding(.horizontal, 32)
-            }
+        RetryCover(background: hostPalette.surface, foreground: hostPalette.onSurface) {
+            // Retry in place: clear the error, bring the join cover back, reload.
+            failed = false
+            loading = true
+            reloadToken += 1
+        }
     }
 
     /// The floating chrome: status-bar strip + Leave bar over a fading scrim of the
@@ -237,7 +221,6 @@ struct GameHostScreen: View {
                 title: displayTitle,
                 playerName: profile.name,
                 barContent: barContent,
-                accented: pageTheme.accent != nil,
                 onLeave: onLeave,
                 onEditName: { renameRequest = RenameRequest(profile: profile) },
                 onChipRight: { chipRight = $0 }
@@ -282,7 +265,6 @@ private struct LeaveBar: View {
     let title: String
     let playerName: String
     let barContent: Color?
-    let accented: Bool
     let onLeave: () -> Void
     let onEditName: () -> Void
     let onChipRight: (CGFloat) -> Void
@@ -313,7 +295,7 @@ private struct LeaveBar: View {
 
             // Report the chip's trailing edge (global coords) so the host can align
             // the page's horizontal safe zone with it.
-            PlayerChip(name: playerName, accented: accented, action: onEditName)
+            PlayerChip(name: playerName, action: onEditName)
                 .environment(\.cgPalette, barContent.map { palette.flippedForBar($0) } ?? palette)
                 .onGeometryChange(for: CGFloat.self) { proxy in
                     proxy.frame(in: .global).maxX
@@ -329,7 +311,7 @@ private struct LeaveBar: View {
 private extension CGPalette {
     /// Route a game-supplied bar content color through the tokens the bar's chip
     /// actually reads (label/icon = onSurface, border = outline at 50%), so
-    /// everything on the bar flips together. The accented chip keeps reading
+    /// everything on the bar flips together. The chip's fill keeps reading
     /// `primary` — the game accent — untouched, matching Android.
     func flippedForBar(_ content: Color) -> CGPalette {
         var p = self

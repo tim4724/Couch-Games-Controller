@@ -41,7 +41,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -72,7 +71,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -93,6 +91,8 @@ import com.couchgames.controller.data.hostInDomain
 import com.couchgames.controller.data.isPrivateHost
 import com.couchgames.controller.theme.CouchGamesTheme
 import com.couchgames.controller.ui.components.PlayerChip
+import com.couchgames.controller.ui.components.ServerUnreachableRetry
+import com.couchgames.controller.ui.components.denyLocalFileAccess
 import com.couchgames.controller.ui.components.findActivity
 import com.couchgames.controller.ui.components.hideNavigationBar
 import com.couchgames.controller.ui.components.themeLightBarIcons
@@ -322,12 +322,7 @@ private fun GameHostContent(
           settings.domStorageEnabled = true                  // the controller persists via localStorage
           settings.mediaPlaybackRequiresUserGesture = false
           // Harden: the remote controller has no business touching local files.
-          settings.allowFileAccess = false
-          settings.allowContentAccess = false
-          @Suppress("DEPRECATION")
-          settings.allowFileAccessFromFileURLs = false
-          @Suppress("DEPRECATION")
-          settings.allowUniversalAccessFromFileURLs = false
+          denyLocalFileAccess()
           // Match the dark chrome while the page is blank — kills the white flash.
           setBackgroundColor(surfaceArgb)
           // Intercept insets, two jobs. (1) The REAL insets never reach WebView:
@@ -436,30 +431,11 @@ private fun GameHostContent(
         }
       }
       // Load failed: an opaque cover over the dead page offering retry-in-place (so a
-      // transient blip doesn't cost a re-scan) or Leave. Above the join cover, below
-      // the floating chrome.
+      // transient blip doesn't cost a re-scan). Above the join cover, below the floating
+      // chrome. No Leave button — the Leave bar's X already exits. Surface-toned so it
+      // sits over the live game page rather than reading as a full screen.
       if (failed) {
-        Box(
-          Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface),
-          contentAlignment = Alignment.Center,
-        ) {
-          Column(
-            modifier = Modifier.padding(horizontal = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-          ) {
-            Text(
-              stringResource(R.string.error_server_unreachable_short),
-              style = MaterialTheme.typography.bodyLarge,
-              color = MaterialTheme.colorScheme.onSurface,
-              textAlign = TextAlign.Center,
-            )
-            Button(onClick = retry) {
-              Text(stringResource(R.string.action_retry))
-            }
-            // No Leave button here — the Leave bar's X already exits.
-          }
-        }
+        ServerUnreachableRetry(onRetry = retry, background = MaterialTheme.colorScheme.surface)
       }
     }
     // The floating chrome: status-bar strip + LEAVE bar over a scrim. Top +

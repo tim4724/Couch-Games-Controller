@@ -55,6 +55,20 @@ struct SafeZone: Equatable {
     var left: Int = 0
     var right: Int = 0
     var bottom: Int = 0
+
+    var uiEdgeInsets: UIEdgeInsets {
+        UIEdgeInsets(top: CGFloat(top), left: CGFloat(left), bottom: CGFloat(bottom), right: CGFloat(right))
+    }
+}
+
+/// A navigation cancelled on purpose — external links and the cross-doc push cancel in
+/// decidePolicyFor, which surfaces in didFail as NSURLErrorCancelled or WebKit's
+/// frame-load-interrupted (102). Not a real load failure, so both web hosts ignore it.
+func isDeliberateNavigationCancellation(_ error: Error) -> Bool {
+    let ns = error as NSError
+    if ns.domain == NSURLErrorDomain, ns.code == NSURLErrorCancelled { return true }
+    if ns.domain == "WebKitErrorDomain", ns.code == 102 { return true }
+    return false
 }
 
 /// WKWebView whose safeAreaInsets are synthetic, so viewport-fit=cover pages see
@@ -141,10 +155,7 @@ struct GameWebView: UIViewRepresentable {
         webView.isInspectable = true
         #endif
         webView.navigationDelegate = coordinator
-        webView.syntheticSafeAreaInsets = UIEdgeInsets(
-            top: CGFloat(safeZone.top), left: CGFloat(safeZone.left),
-            bottom: CGFloat(safeZone.bottom), right: CGFloat(safeZone.right)
-        )
+        webView.syntheticSafeAreaInsets = safeZone.uiEdgeInsets
         coordinator.lastInjectedName = playerName
         coordinator.lastPushedZone = safeZone
         // Going home must drop the relay socket (Android gets this for free from the
@@ -173,10 +184,7 @@ struct GameWebView: UIViewRepresentable {
             coordinator.lastPushedZone = safeZone
             // env() re-derives from the synthetic insets — the iOS analog of
             // requestApplyInsets; the vars remain the source of truth.
-            webView.syntheticSafeAreaInsets = UIEdgeInsets(
-                top: CGFloat(safeZone.top), left: CGFloat(safeZone.left),
-                bottom: CGFloat(safeZone.bottom), right: CGFloat(safeZone.right)
-            )
+            webView.syntheticSafeAreaInsets = safeZone.uiEdgeInsets
             webView.evaluateJavaScript(GameHostJS.safeZonePush(safeZone), completionHandler: nil)
         }
 
@@ -293,13 +301,9 @@ struct GameWebView: UIViewRepresentable {
         }
 
         private func reportLoadFailure(_ error: Error) {
-            // Ignore our own teardown and a game already ended. Off-list navigations we
-            // cancel in decidePolicyFor also land here — as NSURLErrorCancelled or
-            // WebKit's frame-load-interrupted (102) — and are deliberate, not failures.
+            // Ignore our own teardown and a game already ended.
             guard !isTearingDown, !didEnd else { return }
-            let ns = error as NSError
-            if ns.domain == NSURLErrorDomain, ns.code == NSURLErrorCancelled { return }
-            if ns.domain == "WebKitErrorDomain", ns.code == 102 { return }
+            if isDeliberateNavigationCancellation(error) { return }
             // Not terminal — surface the in-place retry overlay; Retry re-issues the load.
             DispatchQueue.main.async { self.parent.failed = true }
         }

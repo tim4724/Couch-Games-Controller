@@ -6,14 +6,12 @@ import UIKit
 /// Tappable player-identity chip (home header + in-game bar).
 struct PlayerChip: View {
     let name: String
-    var accented: Bool = false
     let action: () -> Void
 
     @Environment(\.cgPalette) private var palette
 
-    init(name: String, accented: Bool = false, action: @escaping () -> Void) {
+    init(name: String, action: @escaping () -> Void) {
         self.name = name
-        self.accented = accented
         self.action = action
     }
 
@@ -37,6 +35,39 @@ struct PlayerChip: View {
 
     private var displayName: String {
         name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? String(localized: "Set name") : name
+    }
+}
+
+// MARK: - RetryCover
+
+/// Opaque "couldn't reach the server / try again" cover shown over a dead WebView
+/// (host unreachable) — same copy and shape in the game host and the legal doc
+/// viewer. The fill differs (a live game's surface vs the screen background), so the
+/// caller passes both it and its content color; the button follows the palette accent.
+struct RetryCover: View {
+    let background: Color
+    let foreground: Color
+    let onRetry: () -> Void
+
+    @Environment(\.cgPalette) private var palette
+
+    var body: some View {
+        ZStack {
+            background.ignoresSafeArea()
+            VStack(spacing: 24) {
+                // Short form — the Retry button already says "try again".
+                Text(String(localized: "Couldn’t reach the server."))
+                    .font(.cgBodyLarge)
+                    .foregroundStyle(foreground)
+                    .multilineTextAlignment(.center)
+                Button(action: onRetry) {
+                    Text(String(localized: "Try again")).font(.cgTitleMedium)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(palette.primary)
+            }
+            .padding(.horizontal, 32)
+        }
     }
 }
 
